@@ -6,8 +6,8 @@
   <style>
     /* ======== ESTILOS GERAIS ======== */
     body {
-      margin: 0; 
-      padding: 0; 
+      margin: 0;
+      padding: 0;
       font-family: "Helvetica Neue", Arial, sans-serif;
       background: #f0f0f3;
       color: #333;
@@ -222,7 +222,7 @@
   <div id="playerSection">
     <h2>Você é um Jogador</h2>
     <div id="playerRoomIdArea">
-      <label>Sala ID: </label> 
+      <label>Sala ID: </label>
       <input type="text" id="inputRoomId" placeholder="Digite o ID da sala ou use ?room= no link">
       <button id="btnGoRoom">Entrar</button>
     </div>
@@ -292,22 +292,22 @@ function criarNovaSala() {
  *    Para 300 perguntas, crie um array grande.
  ************************************************************/
 const normalQuestions = [
-  { 
-    question: "Quem você acha que escalaria o Everest sem pensar?", 
+  {
+    question: "Quem você acha que escalaria o Everest sem pensar?",
     curiosity: "Curiosidade: O Monte Everest tem quase 9.000 metros de altitude."
   },
-  { 
-    question: "Quem você acha que viraria meme da internet em dois segundos?", 
+  {
+    question: "Quem você acha que viraria meme da internet em dois segundos?",
     curiosity: "Sabia que mais de 70% dos memes surgem no Twitter?"
   }
 ];
 const picanteQuestions = [
-  { 
-    question: "Quem você acha que iria pra uma praia de nudismo sem hesitar?", 
+  {
+    question: "Quem você acha que iria pra uma praia de nudismo sem hesitar?",
     curiosity: "Curiosidade: Praias de nudismo são populares na Europa."
   },
-  { 
-    question: "Quem você acha que beijaria alguém aleatório numa festa?", 
+  {
+    question: "Quem você acha que beijaria alguém aleatório numa festa?",
     curiosity: "Existem estudos que catalogam mais de 20 tipos de beijos!"
   }
 ];
@@ -367,13 +367,13 @@ let globalRoomId = null;
 let globalIsHost = false;
 let globalPlayerId = null;
 let globalPlayerName = "";
-let globalModo = "normal"; 
+let globalModo = "normal";
 let globalBebida = "com";
-let globalNumRodadas = 5; 
+let globalNumRodadas = 5;
 let globalRoundAtual = 0;
 let playersRef = null;
 let votesRef = null;
-let salaRef = null; 
+let salaRef = null;
 
 // Pool de perguntas
 let questionPool = [];
