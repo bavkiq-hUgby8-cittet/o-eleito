@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>O Eleito - Voto Único + Próxima Pergunta</title>
+  <title>O Eleito - Voto Único + Próxima Pergunta (QR Code Interno)</title>
   <style>
     body {
       margin: 0; padding: 0;
@@ -94,7 +94,7 @@
 <body>
 
 <header>
-  <h1>O Eleito - Voto Único + Próxima Pergunta</h1>
+  <h1>O Eleito - Voto Único + Próxima Pergunta (QR Code Interno)</h1>
 </header>
 
 <div class="container">
@@ -198,6 +198,8 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-database-compat.js"></script>
+<!-- Biblioteca QRCode para gerar QR Code localmente -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.2/build/qrcode.min.js"></script>
 
 <script>
 /**************************************************************
@@ -377,8 +379,9 @@ btnCreateRoom.onclick = async () => {
 
   const fullLink = window.location.origin + window.location.pathname + `?room=${globalRoomId}`;
   roomLink.textContent = fullLink;
-  const qrApi = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(fullLink)}`;
-  qrCodeImg.src = qrApi;
+
+  // Em vez de google charts, geramos QR local:
+  gerarQRCode(fullLink);
 
   // Escuta jogadores
   playersRef.on("value", (snap) => {
@@ -398,6 +401,17 @@ btnCreateRoom.onclick = async () => {
   btnStartGame.classList.remove("hidden");
   btnEndGame.classList.remove("hidden");
 };
+
+/** Gerar QR Code local (base64) usando a lib "qrcode" **/
+function gerarQRCode(link) {
+  QRCode.toDataURL(link, { width: 200 }, (err, url) => {
+    if(err) {
+      console.error("Erro ao gerar QR:", err);
+      return;
+    }
+    qrCodeImg.src = url; // data:image/png;base64, ....
+  });
+}
 
 /** Mostrar jogadores no HOST */
 function exibirJogadoresNoHost(playersObj) {
@@ -667,7 +681,7 @@ function montarBotoesVoto(playersObj){
   });
 }
 
-/** Ao votar => desabilita todos botões, marca o clicado com cor diferente */
+/** Ao votar => desabilita todos botões, marca o clicado */
 function votarEm(alvoPid,botao){
   votesRef.child(globalPlayerId).set(alvoPid)
     .then(()=>{
