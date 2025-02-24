@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>O Eleito - Versão com "Próxima Pergunta"</title>
+  <meta charset="UTF-8" />
+  <title>O Eleito - Botão Próxima Pergunta (Revisado)</title>
   <style>
-    /* ======== ESTILOS GERAIS ======== */
+    /* ======= ESTILOS BÁSICOS ======= */
     body {
       margin: 0;
       padding: 0;
@@ -31,27 +31,19 @@
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
-    h2, h3 {
+    h2,h3 {
       margin-top: 0;
     }
     .hidden {
       display: none !important;
     }
-
-    /* Seções de host e player */
-    #initialSection, #hostSection, #playerSection {
-      margin-bottom: 20px;
-    }
-    #hostSection, #playerSection {
+    #hostSection,#playerSection {
+      display: none; /* inicia escondido */
       border: 1px solid #ccc;
       border-radius: 8px;
       padding: 20px;
       background: #fafafa;
-      display: none; /* some até acionado */
-    }
-    hr {
-      margin: 15px 0;
+      margin-bottom: 20px;
     }
 
     /* Botões */
@@ -79,13 +71,12 @@
     /* Inputs */
     input[type="text"], select {
       padding: 8px;
-      border-radius: 4px;
       border: 1px solid #ccc;
+      border-radius: 4px;
       font-size: 1rem;
       margin-right: 10px;
     }
 
-    /* Lista de jogadores */
     .playerList {
       list-style: none;
       padding: 0;
@@ -94,15 +85,15 @@
       margin: 5px 0;
     }
 
-    /* QR Code */
+    /* QR code */
     #qrCodeImg {
-      margin: 10px 0;
+      margin-top: 10px;
       display: block;
       max-width: 200px;
     }
 
-    /* Área da pergunta + curiosidade */
-    #questionContainer {
+    /* Pergunta + Curiosidade */
+    #questionContainer, #playerQuestionContainer {
       text-align: center;
       margin: 20px 0;
     }
@@ -116,34 +107,24 @@
       font-size: 1.2rem;
       color: #222;
     }
-
-    /* Mensagens de resultado */
     .resultHighlight {
       color: #d9534f;
       font-weight: bold;
     }
-
     .rankingItem {
       margin: 5px 0;
     }
 
-    /* Responsivo */
-    @media (max-width: 600px) {
-      .container {
-        margin: 10px;
-        padding: 10px;
-      }
-    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>O Eleito - Jogo Interativo</h1>
+  <h1>O Eleito - Botão Próxima Pergunta (Revisado)</h1>
 </header>
 
 <div class="container">
-  <!-- Seção Inicial -->
+  <!-- Seção Inicial (Escolher Host ou Jogador) -->
   <div id="initialSection">
     <h2>Bem-vindo!</h2>
     <p>Escolha se você é o <strong>Host</strong> (organizador) ou <strong>Jogador</strong>:</p>
@@ -182,7 +163,7 @@
       <button id="btnCreateRoom">Criar Sala Agora</button>
     </div>
 
-    <!-- Informações após a sala ser criada -->
+    <!-- Informações da sala (após criada) -->
     <div id="roomInfo" class="hidden">
       <p><strong>ID da Sala:</strong> <span id="roomIdLabel"></span></p>
       <p><strong>Link da Sala:</strong> <span id="roomLink"></span></p>
@@ -197,20 +178,19 @@
       <!-- Área do jogo em andamento -->
       <div id="gameArea" class="hidden">
         <h3>Rodada: <span id="roundCounter"></span> / <span id="totalRounds"></span></h3>
-
-        <!-- Container central da curiosidade + pergunta -->
         <div id="questionContainer">
           <div class="curiosityText" id="curiosityText"></div>
           <div class="questionText" id="questionText"></div>
         </div>
-
         <p id="voteStatus"></p>
+
         <button id="btnReveal" class="hidden">Revelar Resultado</button>
         <button id="btnNextQuestion" class="hidden">Próxima Pergunta</button>
+
         <div id="resultArea"></div>
       </div>
 
-      <!-- Área de fim de jogo -->
+      <!-- Fim do jogo -->
       <div id="endGameArea" class="hidden">
         <h3>Fim do Jogo!</h3>
         <div id="rankingArea"></div>
@@ -223,30 +203,25 @@
     <h2>Você é um Jogador</h2>
     <div id="playerRoomIdArea">
       <label>Sala ID: </label>
-      <input type="text" id="inputRoomId" placeholder="Digite o ID da sala ou use ?room= no link">
+      <input type="text" id="inputRoomId" placeholder="Ex.: Sala_12345" />
       <button id="btnGoRoom">Entrar</button>
     </div>
 
     <div id="playerJoinArea" class="hidden">
       <h3>Entrar como jogador</h3>
-      <input type="text" id="playerNameInput" placeholder="Seu nome">
+      <input type="text" id="playerNameInput" placeholder="Seu nome" />
       <button id="btnJoinPlayer">Participar</button>
     </div>
 
     <div id="playerGameArea" class="hidden">
       <h3>Sala: <span id="playerRoomIdLabel"></span></h3>
       <p>Olá, <span id="playerNameLabel"></span>!</p>
-
-      <!-- Exibir curiosidade e pergunta também ao jogador -->
-      <div id="playerQuestionContainer" style="text-align: center; margin: 20px 0;">
+      <div id="playerQuestionContainer">
         <div class="curiosityText" id="playerCuriosityText"></div>
         <div class="questionText" id="playerQuestionText"></div>
       </div>
-
       <h4>Vote em quem você acha que se encaixa:</h4>
       <div id="voteOptions"></div>
-
-      <!-- Exibir resultado aqui também -->
       <div id="playerResultArea" style="margin-top: 15px; color:#b00;"></div>
     </div>
   </div>
@@ -257,112 +232,106 @@
 <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-database-compat.js"></script>
 
 <script>
-/************************************************************
- * 1) CONFIGURAR O FIREBASE COM SUAS CREDENCIAIS
- ************************************************************/
-
+/**************************************************************
+ * 1) SUAS CREDENCIAIS DO FIREBASE
+ **************************************************************/
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com/",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyCEKt94I164HQG5C8hypgFDqnfU0sztBZo",
+  authDomain: "sampleapp-7d986.firebaseapp.com",
+  databaseURL: "https://sampleapp-7d986-default-rtdb.firebaseio.com/",
+  projectId: "sampleapp-7d986",
+  storageBucket: "sampleapp-7d986.firebasestorage.app",
+  messagingSenderId: "747030699327",
+  appId: "1:747030699327:web:752a57da0289692e17c78a"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/************************************************************
- * 2) CONTADOR DE SALA (Sala_01, Sala_02...)
- ************************************************************/
-function criarNovaSala() {
-  return db.ref('salaCount').transaction((valorAtual) => {
-    if (valorAtual === null) valorAtual = 0;
-    return valorAtual + 1;
-  }).then((result) => {
-    const salaNum = result.snapshot.val();
-    return "Sala_" + String(salaNum).padStart(2, '0');
-  });
+/**************************************************************
+ * 2) CRIAR ID DE SALA (sem precisar de contador global)
+ **************************************************************/
+function gerarIdSala() {
+  // Exemplo simples: Sala_ + timestamp (para não conflitar)
+  // Se preferir, pode gerar algo mais curto ou até random.
+  return "Sala_" + Date.now();
 }
 
-/************************************************************
- * 3) EXEMPLO DE PERGUNTAS (COM CURIOSIDADES)
- *    Para 300 perguntas, crie um array grande.
- ************************************************************/
+/**************************************************************
+ * 3) Exemplo de perguntas com curiosidades
+ *    Para 300 perguntas, crie arrays grandes.
+ **************************************************************/
 const normalQuestions = [
   {
     question: "Quem você acha que escalaria o Everest sem pensar?",
-    curiosity: "Curiosidade: O Monte Everest tem quase 9.000 metros de altitude."
+    curiosity: "Curiosidade: Monte Everest tem quase 9.000m de altitude!"
   },
   {
     question: "Quem você acha que viraria meme da internet em dois segundos?",
-    curiosity: "Sabia que mais de 70% dos memes surgem no Twitter?"
+    curiosity: "Sabia que 70% dos memes surgem no Twitter?"
   }
 ];
 const picanteQuestions = [
   {
-    question: "Quem você acha que iria pra uma praia de nudismo sem hesitar?",
+    question: "Quem você acha que iria para uma praia de nudismo sem hesitar?",
     curiosity: "Curiosidade: Praias de nudismo são populares na Europa."
   },
   {
     question: "Quem você acha que beijaria alguém aleatório numa festa?",
-    curiosity: "Existem estudos que catalogam mais de 20 tipos de beijos!"
+    curiosity: "Há estudos que catalogam mais de 20 tipos de beijos!"
   }
 ];
 
-/************************************************************
- * 4) ELEMENTOS DO DOM E VARIÁVEIS
- ************************************************************/
-const initialSection = document.getElementById('initialSection');
-const hostSection = document.getElementById('hostSection');
-const playerSection = document.getElementById('playerSection');
+/**************************************************************
+ * 4) Referências no DOM
+ **************************************************************/
+const initialSection = document.getElementById("initialSection");
+const hostSection = document.getElementById("hostSection");
+const playerSection = document.getElementById("playerSection");
 
 // Host config
-const selectModo = document.getElementById('selectModo');
-const selectBebida = document.getElementById('selectBebida');
-const selectRodadas = document.getElementById('selectRodadas');
-const btnCreateRoom = document.getElementById('btnCreateRoom');
-const roomInfo = document.getElementById('roomInfo');
-const roomIdLabel = document.getElementById('roomIdLabel');
-const roomLink = document.getElementById('roomLink');
-const qrCodeImg = document.getElementById('qrCodeImg');
-const connectedPlayers = document.getElementById('connectedPlayers');
-const btnStartGame = document.getElementById('btnStartGame');
-const btnEndGame = document.getElementById('btnEndGame');
-const gameArea = document.getElementById('gameArea');
-const voteStatus = document.getElementById('voteStatus');
-const btnReveal = document.getElementById('btnReveal');
-const btnNextQuestion = document.getElementById('btnNextQuestion');
-const resultArea = document.getElementById('resultArea');
-const endGameArea = document.getElementById('endGameArea');
-const rankingArea = document.getElementById('rankingArea');
-const roundCounter = document.getElementById('roundCounter');
-const totalRounds = document.getElementById('totalRounds');
-const curiosityText = document.getElementById('curiosityText');
-const questionText = document.getElementById('questionText');
+const selectModo = document.getElementById("selectModo");
+const selectBebida = document.getElementById("selectBebida");
+const selectRodadas = document.getElementById("selectRodadas");
+const btnCreateRoom = document.getElementById("btnCreateRoom");
+const roomInfo = document.getElementById("roomInfo");
+const roomIdLabel = document.getElementById("roomIdLabel");
+const roomLink = document.getElementById("roomLink");
+const qrCodeImg = document.getElementById("qrCodeImg");
+const connectedPlayers = document.getElementById("connectedPlayers");
+const btnStartGame = document.getElementById("btnStartGame");
+const btnEndGame = document.getElementById("btnEndGame");
+const gameArea = document.getElementById("gameArea");
+const voteStatus = document.getElementById("voteStatus");
+const btnReveal = document.getElementById("btnReveal");
+const btnNextQuestion = document.getElementById("btnNextQuestion");
+const resultArea = document.getElementById("resultArea");
+const endGameArea = document.getElementById("endGameArea");
+const rankingArea = document.getElementById("rankingArea");
+const roundCounter = document.getElementById("roundCounter");
+const totalRounds = document.getElementById("totalRounds");
+const curiosityText = document.getElementById("curiosityText");
+const questionText = document.getElementById("questionText");
 
 // Player
-const inputRoomId = document.getElementById('inputRoomId');
-const btnGoRoom = document.getElementById('btnGoRoom');
-const playerJoinArea = document.getElementById('playerJoinArea');
-const playerNameInput = document.getElementById('playerNameInput');
-const btnJoinPlayer = document.getElementById('btnJoinPlayer');
-const playerGameArea = document.getElementById('playerGameArea');
-const playerRoomIdLabel = document.getElementById('playerRoomIdLabel');
-const playerNameLabel = document.getElementById('playerNameLabel');
-const playerCuriosityText = document.getElementById('playerCuriosityText');
-const playerQuestionText = document.getElementById('playerQuestionText');
-const voteOptions = document.getElementById('voteOptions');
-const playerResultArea = document.getElementById('playerResultArea');
+const inputRoomId = document.getElementById("inputRoomId");
+const btnGoRoom = document.getElementById("btnGoRoom");
+const playerJoinArea = document.getElementById("playerJoinArea");
+const playerNameInput = document.getElementById("playerNameInput");
+const btnJoinPlayer = document.getElementById("btnJoinPlayer");
+const playerGameArea = document.getElementById("playerGameArea");
+const playerRoomIdLabel = document.getElementById("playerRoomIdLabel");
+const playerNameLabel = document.getElementById("playerNameLabel");
+const playerCuriosityText = document.getElementById("playerCuriosityText");
+const playerQuestionText = document.getElementById("playerQuestionText");
+const voteOptions = document.getElementById("voteOptions");
+const playerResultArea = document.getElementById("playerResultArea");
 
-// Botões “Sou Host” e “Sou Player”
-const btnHost = document.getElementById('btnHost');
-const btnPlayer = document.getElementById('btnPlayer');
-const playerRoomIdArea = document.getElementById('playerRoomIdArea');
+// Botões da escolha inicial
+const btnHost = document.getElementById("btnHost");
+const btnPlayer = document.getElementById("btnPlayer");
+const playerRoomIdArea = document.getElementById("playerRoomIdArea");
 
-// Variáveis
+// Variáveis globais
 let globalRoomId = null;
 let globalIsHost = false;
 let globalPlayerId = null;
@@ -371,31 +340,30 @@ let globalModo = "normal";
 let globalBebida = "com";
 let globalNumRodadas = 5;
 let globalRoundAtual = 0;
+let salaRef = null;
 let playersRef = null;
 let votesRef = null;
-let salaRef = null;
 
-// Pool de perguntas
 let questionPool = [];
-let usedQuestionIndexes = [];
+let usedIndexes = [];
 
-/************************************************************
- * 5) Verifica se tem ?room=XXX no link
- ************************************************************/
+/**************************************************************
+ * 5) Detectar se há ?room= no link
+ **************************************************************/
 const urlParams = new URLSearchParams(window.location.search);
-const existingRoomParam = urlParams.get('room');
+const existingRoomParam = urlParams.get("room");
 if (existingRoomParam) {
-  // É jogador
+  // Então é jogador
   globalRoomId = existingRoomParam;
   showPlayerSection();
 } else {
-  // Se não tem, mostra menu inicial
+  // Exibe a tela inicial
   initialSection.style.display = "block";
 }
 
-/************************************************************
+/**************************************************************
  * 6) Botões da tela inicial
- ************************************************************/
+ **************************************************************/
 btnHost.onclick = () => {
   initialSection.style.display = "none";
   hostSection.style.display = "block";
@@ -405,26 +373,29 @@ btnPlayer.onclick = () => {
   playerSection.style.display = "block";
 };
 
-/************************************************************
+/**************************************************************
  * 7) HOST: Criar Sala
- ************************************************************/
+ **************************************************************/
 btnCreateRoom.onclick = async () => {
   globalModo = selectModo.value;
   globalBebida = selectBebida.value;
   globalNumRodadas = parseInt(selectRodadas.value);
 
-  questionPool = buildQuestionPool(globalModo);
-  usedQuestionIndexes = [];
+  questionPool = montarQuestionPool(globalModo);
+  usedIndexes = [];
 
-  const salaGerada = await criarNovaSala(); // ex Sala_01
-  globalRoomId = salaGerada;
+  // Gera ID simples
+  globalRoomId = gerarIdSala(); // ex.: Sala_167863501234
+
   globalIsHost = true;
 
+  // Cria refs
   salaRef = db.ref("salas/" + globalRoomId);
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
 
-  salaRef.set({
+  // Salva dados iniciais
+  await salaRef.set({
     modo: globalModo,
     bebida: globalBebida,
     numRodadas: globalNumRodadas,
@@ -435,201 +406,201 @@ btnCreateRoom.onclick = async () => {
     createdAt: Date.now()
   });
 
-  roomInfo.classList.remove('hidden');
+  // Mostra roomInfo
+  roomInfo.classList.remove("hidden");
   roomIdLabel.textContent = globalRoomId;
 
+  // Monta link (QR code)
   const fullLink = window.location.origin + window.location.pathname + "?room=" + globalRoomId;
   roomLink.textContent = fullLink;
-
-  // Gera QR Code
   const qrApi = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" + encodeURIComponent(fullLink);
   qrCodeImg.src = qrApi;
 
   // Escuta jogadores
   playersRef.on("value", (snap) => {
     const data = snap.val() || {};
-    renderPlayerList(data);
+    renderPlayers(data);
   });
 
-  // Se o lastResult mudar, atualiza resultArea
+  // Escuta lastResult (pra atualizar do host)
   salaRef.child("lastResult").on("value", (snap) => {
     const txt = snap.val() || "";
-    if (txt !== "") {
+    if (txt) {
       resultArea.innerHTML = txt;
     }
   });
 
-  document.getElementById('configSection').classList.add('hidden');
-  btnStartGame.classList.remove('hidden');
-  btnEndGame.classList.remove('hidden');
+  document.getElementById("configSection").classList.add("hidden");
+  btnStartGame.classList.remove("hidden");
+  btnEndGame.classList.remove("hidden");
 };
 
-/** Lista de jogadores no Host */
-function renderPlayerList(playersObj) {
+/** Renderiza jogadores conectados no host */
+function renderPlayers(playersObj) {
   connectedPlayers.innerHTML = "";
-  Object.keys(playersObj).forEach(pid => {
-    const li = document.createElement('li');
+  Object.keys(playersObj).forEach((pid) => {
+    const li = document.createElement("li");
     li.textContent = playersObj[pid].name;
     connectedPlayers.appendChild(li);
   });
 }
 
-/************************************************************
+/**************************************************************
  * 8) Iniciar Partida (Host)
- ************************************************************/
+ **************************************************************/
 btnStartGame.onclick = () => {
-  salaRef.update({
-    status: "inProgress",
-    round: 1
-  });
+  salaRef.update({ status: "inProgress", round: 1 });
   globalRoundAtual = 1;
-  btnStartGame.classList.add('hidden');
-  gameArea.classList.remove('hidden');
-  endGameArea.classList.add('hidden');
+  btnStartGame.classList.add("hidden");
+  gameArea.classList.remove("hidden");
+  endGameArea.classList.add("hidden");
   totalRounds.textContent = globalNumRodadas.toString();
   roundCounter.textContent = globalRoundAtual.toString();
 
   startNewRound();
 };
 
-/** Encerrar Partida Manual (Host) */
+/** Encerrar Partida manualmente */
 btnEndGame.onclick = () => {
-  finalizeGame();
+  finalizarJogo();
 };
 
-/************************************************************
- * 9) Sortear Pergunta (Host)
- ************************************************************/
+/**************************************************************
+ * 9) Sortear Pergunta e Exibir
+ **************************************************************/
 function startNewRound() {
+  // Limpa votos
   votesRef.set({});
   resultArea.innerHTML = "";
   salaRef.child("lastResult").set("");
-  btnReveal.classList.remove('hidden');
-  btnNextQuestion.classList.add('hidden');
+  btnReveal.classList.remove("hidden");
+  btnNextQuestion.classList.add("hidden");
   voteStatus.textContent = "Aguardando votos...";
 
   const idx = getUniqueRandomIndex();
-  const objPerg = questionPool[idx];
-  curiosityText.textContent = objPerg.curiosity;
-  questionText.textContent = objPerg.question;
+  const pergObj = questionPool[idx];
 
+  // Mostra no host
+  curiosityText.textContent = pergObj.curiosity;
+  questionText.textContent = pergObj.question;
+
+  // Salva no DB, pra jogador ver também
   salaRef.update({
-    currentQuestion: objPerg
+    currentQuestion: pergObj
   });
 }
 
-/** Sorteio de índice único */
+/** Gera índice de pergunta não repetida */
 function getUniqueRandomIndex() {
-  if (usedQuestionIndexes.length >= questionPool.length) {
+  if (usedIndexes.length >= questionPool.length) {
+    // se acabaram as perguntas, volta a sortear sem restrição
     return Math.floor(Math.random() * questionPool.length);
   }
   let idx = Math.floor(Math.random() * questionPool.length);
-  while (usedQuestionIndexes.includes(idx)) {
+  while (usedIndexes.includes(idx)) {
     idx = Math.floor(Math.random() * questionPool.length);
   }
-  usedQuestionIndexes.push(idx);
+  usedIndexes.push(idx);
   return idx;
 }
 
-/************************************************************
+/**************************************************************
  * 10) Revelar Resultado (Host)
- ************************************************************/
+ **************************************************************/
 btnReveal.onclick = async () => {
-  const snap = await votesRef.once('value');
-  const votesData = snap.val() || {};
+  const snap = await votesRef.once("value");
+  const votes = snap.val() || {};
 
   const count = {};
-  Object.keys(votesData).forEach(voterId => {
-    const chosen = votesData[voterId];
+  Object.keys(votes).forEach((voterId) => {
+    const chosen = votes[voterId];
     count[chosen] = (count[chosen] || 0) + 1;
   });
 
   let eleitoId = null;
-  let maxVotes = 0;
-  Object.keys(count).forEach(pid => {
-    if (count[pid] > maxVotes) {
-      maxVotes = count[pid];
+  let maxVotos = 0;
+  Object.keys(count).forEach((pid) => {
+    if (count[pid] > maxVotos) {
+      maxVotos = count[pid];
       eleitoId = pid;
     }
   });
 
+  let msg = "";
   if (!eleitoId) {
-    const msg = "<p>Ninguém recebeu voto ainda!</p>";
+    msg = "<p>Ninguém recebeu voto ainda!</p>";
+    salaRef.child("lastResult").set(msg);
+    resultArea.innerHTML = msg;
+  } else {
+    // Pegar nome do eleito
+    const pSnap = await playersRef.once("value");
+    const playersData = pSnap.val() || {};
+    const eleitoName = playersData[eleitoId] ? playersData[eleitoId].name : "Desconhecido";
+
+    msg = `O Eleito é <span class='resultHighlight'>${eleitoName}</span> com ${maxVotos} voto(s)!`;
+    if (globalBebida === "com") {
+      msg += `<br><strong>${eleitoName}, beba seu drink!</strong>`;
+    }
     resultArea.innerHTML = msg;
     salaRef.child("lastResult").set(msg);
-    // Depois que revela, permite "Próxima Pergunta"
-    btnReveal.classList.add('hidden');
-    btnNextQuestion.classList.remove('hidden');
-    return;
+
+    // Atualiza pontuação
+    const atualScore = playersData[eleitoId].score || 0;
+    playersRef.child(eleitoId).update({ score: atualScore + 1 });
   }
 
-  // Pegar nome do eleito
-  const playersSnap = await playersRef.once('value');
-  const playersData = playersSnap.val() || {};
-  const eleitoName = playersData[eleitoId] ? playersData[eleitoId].name : "Desconhecido";
-
-  let msg = `O Eleito é <span class="resultHighlight">${eleitoName}</span> com ${count[eleitoId]} voto(s)!`;
-  if (globalBebida === "com") {
-    msg += `<br><strong>${eleitoName}, beba seu drink!</strong>`;
-  }
-  resultArea.innerHTML = msg;
-  salaRef.child("lastResult").set(msg);
-
-  // Atualiza pontuação
-  const currScore = playersData[eleitoId].score || 0;
-  playersRef.child(eleitoId).update({ score: currScore + 1 });
-
-  // Oculta "Revelar" e mostra "Próxima Pergunta"
-  btnReveal.classList.add('hidden');
-  btnNextQuestion.classList.remove('hidden');
+  // Botões
+  btnReveal.classList.add("hidden");
+  btnNextQuestion.classList.remove("hidden");
 };
 
-/************************************************************
+/**************************************************************
  * 11) Botão "Próxima Pergunta"
- ************************************************************/
+ **************************************************************/
 btnNextQuestion.onclick = () => {
-  // Verifica se ainda há rodadas
+  // Se ainda há rodadas, avança
   if (globalRoundAtual < globalNumRodadas) {
     globalRoundAtual++;
     roundCounter.textContent = globalRoundAtual.toString();
     startNewRound();
   } else {
-    finalizeGame();
+    finalizarJogo();
   }
 };
 
-/************************************************************
- * 12) Finalizar Partida
- ************************************************************/
-async function finalizeGame() {
+/**************************************************************
+ * 12) Finalizar jogo
+ **************************************************************/
+async function finalizarJogo() {
   voteStatus.textContent = "";
-  gameArea.classList.add('hidden');
-  btnReveal.classList.add('hidden');
-  btnNextQuestion.classList.add('hidden');
-  btnStartGame.classList.add('hidden');
-  btnEndGame.classList.add('hidden');
+  gameArea.classList.add("hidden");
+  btnReveal.classList.add("hidden");
+  btnNextQuestion.classList.add("hidden");
+  btnStartGame.classList.add("hidden");
+  btnEndGame.classList.add("hidden");
 
-  endGameArea.classList.remove('hidden');
-  salaRef.update({ status: 'finished' });
+  endGameArea.classList.remove("hidden");
+  salaRef.update({ status: "finished" });
 
-  const snap = await playersRef.once('value');
+  const snap = await playersRef.once("value");
   const data = snap.val() || {};
-  const arr = Object.keys(data).map(pid => {
-    return { name: data[pid].name, score: data[pid].score || 0 };
-  });
+  const arr = Object.keys(data).map(pid => ({
+    name: data[pid].name,
+    score: data[pid].score || 0
+  }));
   arr.sort((a,b) => b.score - a.score);
 
   let html = "<h4>Ranking Final</h4>";
   arr.forEach((p, i) => {
-    html += `<div class="rankingItem"><strong>${i+1}º</strong> - ${p.name}: ${p.score} votos</div>`;
+    html += `<div class='rankingItem'><strong>${i+1}º</strong> - ${p.name}: ${p.score} votos</div>`;
   });
   rankingArea.innerHTML = html;
 }
 
-/************************************************************
- * 13) Montar Pool de Perguntas
- ************************************************************/
-function buildQuestionPool(modo) {
+/**************************************************************
+ * 13) Montar Array (Normal / Picante / Ambos)
+ **************************************************************/
+function montarQuestionPool(modo) {
   switch(modo) {
     case "normal":
       return [...normalQuestions];
@@ -642,34 +613,34 @@ function buildQuestionPool(modo) {
   }
 }
 
-/************************************************************
+/**************************************************************
  * 14) MODO JOGADOR
- ************************************************************/
+ **************************************************************/
 function showPlayerSection() {
-  initialSection.style.display = 'none';
-  hostSection.style.display = 'none';
-  playerSection.style.display = 'block';
+  initialSection.style.display = "none";
+  hostSection.style.display = "none";
+  playerSection.style.display = "block";
 }
 
-/** Entrar na sala digitando ID */
+/** Digitou sala manualmente */
 btnGoRoom.onclick = () => {
   const rid = inputRoomId.value.trim();
   if (!rid) {
-    alert("Digite o ID da sala (ex.: Sala_01)");
+    alert("Digite o ID da sala (ex.: Sala_1678900)");
     return;
   }
   globalRoomId = rid;
-  playerRoomIdArea.classList.add('hidden');
-  playerJoinArea.classList.remove('hidden');
+  playerRoomIdArea.classList.add("hidden");
+  playerJoinArea.classList.remove("hidden");
 };
 
-/** Se veio via ?room=, pula direto */
+/** Se veio ?room= no link, pula direto */
 if (existingRoomParam) {
-  playerRoomIdArea.classList.add('hidden');
-  playerJoinArea.classList.remove('hidden');
+  playerRoomIdArea.classList.add("hidden");
+  playerJoinArea.classList.remove("hidden");
 }
 
-/** Botão "Participar" (Jogador) */
+/** Botão Participar (Jogador) */
 btnJoinPlayer.onclick = async () => {
   const name = playerNameInput.value.trim();
   if (!name) {
@@ -682,6 +653,7 @@ btnJoinPlayer.onclick = async () => {
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
 
+  // Criar player
   const newPlayerRef = playersRef.push();
   globalPlayerId = newPlayerRef.key;
   await newPlayerRef.set({
@@ -689,8 +661,8 @@ btnJoinPlayer.onclick = async () => {
     score: 0
   });
 
-  // Escuta a pergunta atual
-  salaRef.child("currentQuestion").on('value', (snap) => {
+  // Escuta currentQuestion
+  salaRef.child("currentQuestion").on("value", (snap) => {
     const val = snap.val();
     if (val) {
       playerCuriosityText.textContent = val.curiosity;
@@ -702,49 +674,54 @@ btnJoinPlayer.onclick = async () => {
   });
 
   // Escuta lastResult
-  salaRef.child("lastResult").on('value', (snap) => {
+  salaRef.child("lastResult").on("value", (snap) => {
     const txt = snap.val() || "";
     playerResultArea.innerHTML = txt;
   });
 
   // Escuta status
-  salaRef.child("status").on('value', (snap) => {
-    if (snap.val() === "finished") {
+  salaRef.child("status").on("value", (snap) => {
+    const st = snap.val();
+    if (st === "finished") {
       voteOptions.innerHTML = "<p>O jogo terminou!</p>";
     }
   });
 
-  // Escuta players pra montar botões de voto
-  playersRef.on('value', (snap) => {
+  // Escuta players para montar botões de voto
+  playersRef.on("value", (snap) => {
     const data = snap.val() || {};
-    renderVoteOptions(data);
+    montarBotoesVoto(data);
   });
 
-  playerJoinArea.classList.add('hidden');
-  playerGameArea.classList.remove('hidden');
+  // Exibe a parte do jogador
+  playerJoinArea.classList.add("hidden");
+  playerGameArea.classList.remove("hidden");
   playerRoomIdLabel.textContent = globalRoomId;
   playerNameLabel.textContent = globalPlayerName;
 };
 
-/** Monta botões de voto */
-function renderVoteOptions(playersObj) {
+/** Monta botões para votar */
+function montarBotoesVoto(playersObj) {
   voteOptions.innerHTML = "";
-  Object.keys(playersObj).forEach((pid) => {
+  Object.keys(playersObj).forEach(pid => {
+    // se não quiser votar em si mesmo
     if (pid === globalPlayerId) return;
-    const btn = document.createElement('button');
+    const btn = document.createElement("button");
     btn.textContent = playersObj[pid].name;
-    btn.onclick = () => castVote(pid);
+    btn.onclick = () => votarEm(pid);
     voteOptions.appendChild(btn);
   });
 }
 
-function castVote(targetPid) {
-  votesRef.child(globalPlayerId).set(targetPid)
+/** Registrar voto do jogador */
+function votarEm(alvoPid) {
+  votesRef.child(globalPlayerId).set(alvoPid)
     .then(() => {
       alert("Voto computado!");
     })
     .catch(err => console.error(err));
 }
+
 </script>
 </body>
 </html>
