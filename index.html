@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>O Eleito - Versão Completa</title>
-  <!-- Estilos inspirados em um design moderno (bordas, sombras, etc.) -->
   <style>
-    /* Layout geral */
+    /* ======== ESTILOS GERAIS ======== */
     body {
       margin: 0; 
       padding: 0; 
@@ -24,8 +23,6 @@
       margin: 0;
       font-size: 1.8rem;
     }
-
-    /* Container principal */
     .container {
       max-width: 1000px;
       margin: 20px auto;
@@ -34,28 +31,29 @@
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
     h2, h3 {
       margin-top: 0;
-    }
-
-    /* Seções de host e player */
-    #hostSection, #playerSection {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      display: none; /* Inicia escondido, aparece dinamicamente */
-      background: #fafafa;
-    }
-    #configSection {
-      margin-bottom: 20px;
     }
     .hidden {
       display: none !important;
     }
 
-    /* Botões com estilo "moderno" */
+    /* Seções de host e player */
+    #initialSection, #hostSection, #playerSection {
+      margin-bottom: 20px;
+    }
+    #hostSection, #playerSection {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      background: #fafafa;
+      display: none; /* Inicia escondido, aparece dinamicamente */
+    }
+    hr {
+      margin: 15px 0;
+    }
+
+    /* Botões */
     button {
       background: #007BFF;
       color: #fff;
@@ -66,6 +64,8 @@
       font-size: 1rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       transition: background 0.2s;
+      margin-right: 8px;
+      margin-bottom: 8px;
     }
     button:hover {
       background: #0056b3;
@@ -84,20 +84,16 @@
       margin-right: 10px;
     }
 
-    /* Listas e divisórias */
+    /* Lista de jogadores */
     .playerList {
-      margin: 0; 
-      padding: 0;
       list-style: none;
+      padding: 0;
     }
     .playerList li {
       margin: 5px 0;
     }
-    hr {
-      margin: 15px 0;
-    }
 
-    /* QR code */
+    /* QR Code */
     #qrCodeImg {
       margin: 10px 0;
       display: block;
@@ -117,14 +113,12 @@
     .voteButton:hover {
       background: #218838;
     }
-
-    /* Mensagens de resultado */
     .resultHighlight {
       color: #d9534f;
       font-weight: bold;
     }
 
-    /* Rodapé do ranking */
+    /* Ranking final */
     .rankingItem {
       margin: 5px 0;
     }
@@ -145,10 +139,10 @@
 </header>
 
 <div class="container">
-  <!-- Seção inicial de escolha: Host ou Player? (Exibir somente se não houver ?room=...) -->
+  <!-- Seção Inicial -->
   <div id="initialSection">
     <h2>Bem-vindo!</h2>
-    <p>Escolha se você é o <strong>Host</strong> (organizador) ou foi convidado a uma sala (<strong>Player</strong>).</p>
+    <p>Escolha se você é o <strong>Host</strong> (organizador) ou <strong>Jogador</strong>:</p>
     <button id="btnHost">Sou o Host (Criar Sala)</button>
     <button id="btnPlayer">Sou um Jogador (Entrar em Sala)</button>
   </div>
@@ -157,6 +151,7 @@
   <div id="hostSection">
     <h2>Você é o Host</h2>
 
+    <!-- Configurações da sala -->
     <div id="configSection">
       <h3>Configurar Nova Sala</h3>
       <label for="selectModo">Modo de Perguntas:</label>
@@ -185,7 +180,7 @@
       <button id="btnCreateRoom">Criar Sala Agora</button>
     </div>
 
-    <!-- Infos da sala criada -->
+    <!-- Informações após a sala ser criada -->
     <div id="roomInfo" class="hidden">
       <p><strong>ID da Sala:</strong> <span id="roomIdLabel"></span></p>
       <p><strong>Link da Sala:</strong> <span id="roomLink"></span></p>
@@ -195,6 +190,9 @@
       <ul id="connectedPlayers" class="playerList"></ul>
       <hr>
       <button id="btnStartGame" class="hidden">Iniciar Partida</button>
+      <button id="btnEndGame" class="hidden">Encerrar Partida</button>
+
+      <!-- Área do jogo em andamento -->
       <div id="gameArea" class="hidden">
         <h3>Rodada: <span id="roundCounter"></span> / <span id="totalRounds"></span></h3>
         <div id="questionDisplay"></div>
@@ -202,7 +200,8 @@
         <button id="btnReveal" class="hidden">Revelar Resultado</button>
         <div id="resultArea"></div>
       </div>
-      <hr>
+
+      <!-- Área de fim de jogo -->
       <div id="endGameArea" class="hidden">
         <h3>Fim do Jogo!</h3>
         <div id="rankingArea"></div>
@@ -210,7 +209,7 @@
     </div>
   </div>
 
-  <!-- Seção do Player -->
+  <!-- Seção do Jogador -->
   <div id="playerSection">
     <h2>Você é um Jogador</h2>
     <div id="playerRoomIdArea">
@@ -233,7 +232,6 @@
       <div id="voteOptions"></div>
     </div>
   </div>
-
 </div>
 
 <!-- Firebase SDK -->
@@ -241,25 +239,34 @@
 <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-database-compat.js"></script>
 
 <script>
+/************************************************************
+ * 1) CONFIGURAR O FIREBASE AQUI, COM SUAS CREDENCIAIS
+ ************************************************************/
+/* 
+   Certifique-se de que "databaseURL" corresponde ao seu 
+   Realtime Database (URL exato).
+*/
+
 const firebaseConfig = {
   apiKey: "AIzaSyCEKt94I164HQG5C8hypgFDqnfU0sztBZo",
   authDomain: "sampleapp-7d986.firebaseapp.com",
+  databaseURL: "https://sampleapp-7d986-default-rtdb.firebaseio.com/",
   projectId: "sampleapp-7d986",
   storageBucket: "sampleapp-7d986.firebasestorage.app",
   messagingSenderId: "747030699327",
   appId: "1:747030699327:web:752a57da0289692e17c78a"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /************************************************************
- *  2) ARRAYS DE PERGUNTAS
- *  - 200 Perguntas Normais
- *  - 100 Perguntas Picantes
+ * 2) ARRAYS DE PERGUNTAS (NORMAL E PICANTE) - 300 TOTAL
  ************************************************************/
 
+/* === 200 PERGUNTAS NORMAIS === */
 const normalQuestions = [
-  // (1 - 50)
+  // (1–50)
   "Quem você acha que se mudaria para um país desconhecido sem hesitar?",
   "Quem você acha que toparia escalar o Everest só pela aventura?",
   "Quem você acha que seria o(a) mais dramático(a) se perdesse o celular?",
@@ -310,7 +317,7 @@ const normalQuestions = [
   "Quem você acha que comeria comida exótica tipo escorpião frito?",
   "Quem você acha que teria um hábito curioso de sono, tipo falar dormindo?",
   "Quem você acha que levaria um jogo de tabuleiro para a balada?",
-  // (51 - 100)
+  // (51–100)
   "Quem você acha que viraria o(a) “palhaço(a)” da festa sempre?",
   "Quem você acha que é o(a) mais corajoso(a) pra uma prova de resistência física?",
   "Quem você acha que compraria um item bizarro em um leilão só pela história?",
@@ -361,7 +368,7 @@ const normalQuestions = [
   "Quem você acha que participaria de um protesto ou manifestação importante?",
   "Quem você acha que usaria uma roupa super extravagante num evento chique?",
   "Quem você acha que fundaria uma startup de tecnologia?",
-  // (101 - 150)
+  // (101–150)
   "Quem você acha que se meteria a fazer freestyle de rap em público?",
   "Quem você acha que viraria o(a) “DJ oficial” das viagens de carro?",
   "Quem você acha que colecionaria livros raros ou edições limitadas?",
@@ -412,7 +419,7 @@ const normalQuestions = [
   "Quem você acha que sempre escolhe a coisa mais estranha do cardápio pra comer?",
   "Quem você acha que deixaria tudo pra fazer um retiro espiritual no meio do nada?",
   "Quem você acha que chegaria atrasado(a) até na própria festa de aniversário?",
-  // (151 - 200)
+  // (151–200)
   "Quem você acha que seria o(a) “coach motivacional” do grupo?",
   "Quem você acha que levaria super a sério a organização de um Amigo Secreto?",
   "Quem você acha que conheceria todo mundo de um hostel durante uma viagem?",
@@ -465,8 +472,9 @@ const normalQuestions = [
   "Quem você acha que é o(a) mais viciado(a) em tecnologia e gadgets de última geração?"
 ];
 
+/* === 100 PERGUNTAS PICANTES === */
 const picanteQuestions = [
-  // 1 - 50
+  // (1–50)
   "Quem você acha que toparia ir a uma praia de nudismo sem hesitar?",
   "Quem você acha que teria coragem de beijar alguém aleatório numa festa?",
   "Quem você acha que ficaria com dois contatinhos no mesmo dia?",
@@ -517,7 +525,7 @@ const picanteQuestions = [
   "Quem você acha que toparia um “rapidinho” em um lugar inusitado?",
   "Quem você acha que compraria lingeries ou roupas íntimas pra esquentar o clima?",
   "Quem você acha que contaria um fetiche secreto sem problemas?",
-  // 51 - 100
+  // (51–100)
   "Quem você acha que se arriscaria em um aplicativo de paquera bem alternativo?",
   "Quem você acha que riria de nervoso ao receber um nude inesperado?",
   "Quem você acha que dedicaria uma música romântica pra alguém especial em público?",
@@ -571,9 +579,8 @@ const picanteQuestions = [
 ];
 
 /************************************************************
- *  3) ELEMENTOS DO DOM E VARIÁVEIS GLOBAIS
+ * 3) ELEMENTOS DO DOM E VARIÁVEIS GLOBAIS
  ************************************************************/
-// Seções
 const initialSection = document.getElementById('initialSection');
 const hostSection = document.getElementById('hostSection');
 const playerSection = document.getElementById('playerSection');
@@ -589,6 +596,7 @@ const roomLink = document.getElementById('roomLink');
 const qrCodeImg = document.getElementById('qrCodeImg');
 const connectedPlayers = document.getElementById('connectedPlayers');
 const btnStartGame = document.getElementById('btnStartGame');
+const btnEndGame = document.getElementById('btnEndGame');
 const gameArea = document.getElementById('gameArea');
 const questionDisplay = document.getElementById('questionDisplay');
 const voteStatus = document.getElementById('voteStatus');
@@ -634,37 +642,37 @@ let questionPool = [];
 let usedQuestionIndexes = [];
 
 /************************************************************
- *  4) LÓGICA INICIAL: Decidir se é Host ou Player com base no link
+ * 4) DETECTAR SE TEM ?room= NO LINK
  ************************************************************/
 const urlParams = new URLSearchParams(window.location.search);
 const existingRoomParam = urlParams.get('room'); 
 if (existingRoomParam) {
-  // Se tem ?room=XXX, assume que é Player nessa sala
+  // Se tem ?room=XXX, assume que é Player
   globalRoomId = existingRoomParam;
   showPlayerSection();
 } else {
-  // Se não tem ?room=, exibe a tela inicial de escolha
+  // Se não tem ?room=, exibe a tela inicial
   initialSection.style.display = "block";
 }
 
 /************************************************************
- *  5) EVENTOS BÁSICOS: Botões da tela inicial
+ * 5) Botões da tela inicial
  ************************************************************/
 btnHost.onclick = () => {
   initialSection.style.display = "none";
   hostSection.style.display = "block";
 };
+
 btnPlayer.onclick = () => {
   initialSection.style.display = "none";
   playerSection.style.display = "block";
 };
 
 /************************************************************
- *  6) CRIAR SALA (HOST)
+ * 6) HOST CRIAR SALA
  ************************************************************/
 btnCreateRoom.onclick = () => {
-  // Pega configurações
-  globalModo = selectModo.value; // normal, normalPicante, picante
+  globalModo = selectModo.value;   // normal, normalPicante, picante
   globalBebida = selectBebida.value; // com, sem
   globalNumRodadas = parseInt(selectRodadas.value);
 
@@ -672,7 +680,7 @@ btnCreateRoom.onclick = () => {
   questionPool = buildQuestionPool(globalModo);
   usedQuestionIndexes = [];
 
-  // Gera ID da sala e salva no Firebase
+  // Gera ID e salva no Firebase
   globalRoomId = "ROOM" + Math.floor(Math.random() * 1000000);
   globalIsHost = true;
 
@@ -680,7 +688,6 @@ btnCreateRoom.onclick = () => {
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
 
-  // Inicializa dados da sala no banco
   salaRef.set({
     modo: globalModo,
     bebida: globalBebida,
@@ -694,9 +701,11 @@ btnCreateRoom.onclick = () => {
   // Exibe roomInfo
   roomInfo.classList.remove("hidden");
   roomIdLabel.textContent = globalRoomId;
+
   const fullLink = window.location.origin + window.location.pathname + "?room=" + globalRoomId;
   roomLink.textContent = fullLink;
-  // Gera QR code (Google Charts)
+
+  // Gerar QR code (via Google Charts)
   const qrApi = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" + encodeURIComponent(fullLink);
   qrCodeImg.src = qrApi;
 
@@ -706,18 +715,16 @@ btnCreateRoom.onclick = () => {
     renderPlayerList(data);
   });
 
-  // Quando criar a sala, esconde configSection
+  // Esconde config e mostra botões
   document.getElementById('configSection').classList.add('hidden');
   btnStartGame.classList.remove('hidden');
+  btnEndGame.classList.remove('hidden');
 };
 
-/************************************************************
- *  7) RENDERIZAR LISTA DE JOGADORES (HOST)
- ************************************************************/
+/** Exibe lista de jogadores */
 function renderPlayerList(playersObj) {
   connectedPlayers.innerHTML = "";
-  const keys = Object.keys(playersObj);
-  keys.forEach((pid) => {
+  Object.keys(playersObj).forEach((pid) => {
     const li = document.createElement("li");
     li.textContent = playersObj[pid].name;
     connectedPlayers.appendChild(li);
@@ -725,10 +732,9 @@ function renderPlayerList(playersObj) {
 }
 
 /************************************************************
- *  8) INICIAR JOGO (HOST)
+ * 7) INICIAR PARTIDA
  ************************************************************/
 btnStartGame.onclick = () => {
-  // Muda status da sala
   salaRef.update({
     status: "inProgress",
     round: 1
@@ -739,38 +745,40 @@ btnStartGame.onclick = () => {
   endGameArea.classList.add("hidden");
   totalRounds.textContent = globalNumRodadas;
   roundCounter.textContent = globalRoundAtual;
-  
-  // Começa a primeira pergunta
+
   startNewRound();
 };
 
 /************************************************************
- *  9) SORTEAR PERGUNTA E EXIBIR (HOST)
+ * 8) ENCERRAR PARTIDA (BOTÃO NOVO)
+ ************************************************************/
+btnEndGame.onclick = () => {
+  finalizeGame(); // chama o fluxo final imediatamente
+};
+
+/************************************************************
+ * 9) NOVA RODADA: sortear pergunta, limpar votos
  ************************************************************/
 function startNewRound() {
-  // Limpa votos
   votesRef.set({});
   resultArea.innerHTML = "";
   btnReveal.classList.remove("hidden");
+  voteStatus.textContent = "Aguardando votos...";
 
-  // Pega pergunta aleatória da questionPool
-  const randomIndex = getUniqueRandomIndex();
-  const question = questionPool[randomIndex];
+  // Sortear pergunta
+  const idx = getUniqueRandomIndex();
+  const question = questionPool[idx];
+
   questionDisplay.textContent = question;
-
-  // Salva no Firebase: currentQuestion
   salaRef.update({
     currentQuestion: question
   });
-
-  // Exibe texto "Aguardando votos..."
-  voteStatus.textContent = "Aguardando votos...";
 }
 
-/** Retorna um índice aleatório de questionPool que ainda não foi usado */
+/** Sorteia um índice de questionPool que não foi usado ainda */
 function getUniqueRandomIndex() {
   if (usedQuestionIndexes.length === questionPool.length) {
-    // Já usamos tudo, mas em tese não vai acontecer se rodadas <= questionPool.length
+    // Se já usou tudo, faz um "resorteio" livre
     return Math.floor(Math.random() * questionPool.length);
   }
   let idx = Math.floor(Math.random() * questionPool.length);
@@ -782,10 +790,9 @@ function getUniqueRandomIndex() {
 }
 
 /************************************************************
- * 10) BOTÃO "REVELAR RESULTADO" (HOST)
+ * 10) REVELAR RESULTADO DA RODADA
  ************************************************************/
 btnReveal.onclick = async () => {
-  // Lê os votos no Firebase
   const snap = await votesRef.once('value');
   const votesData = snap.val() || {};
   // Contabiliza
@@ -809,35 +816,36 @@ btnReveal.onclick = async () => {
     return;
   }
 
-  // Pegamos o nome do eleito
+  // Pegar nome do eleito
   const playersSnap = await playersRef.once('value');
   const playersData = playersSnap.val() || {};
   const eleitoName = playersData[eleitoId] ? playersData[eleitoId].name : "Desconhecido";
-  
-  // Exibe
-  let msg = `O Eleito é <span class="resultHighlight">${eleitoName}</span> com ${maxVotes} voto(s)!`;
+
+  let msg = `O Eleito é <span class="resultHighlight">${eleitoName}</span>!`;
+  // Conta votos
+  msg += ` Recebeu ${count[eleitoId]} voto(s).`;
+
   if (globalBebida === "com") {
     msg += `<br><strong>${eleitoName}, beba seu drink!</strong>`;
   }
   resultArea.innerHTML = msg;
 
-  // Incrementa pontuação do eleito no Firebase
+  // Atualiza pontuação
   const currentScore = playersData[eleitoId].score || 0;
   playersRef.child(eleitoId).update({
     score: currentScore + 1
   });
 
-  // Avança para próxima rodada ou finaliza
   btnReveal.classList.add("hidden");
 
+  // Próxima rodada ou fim
   if (globalRoundAtual < globalNumRodadas) {
     globalRoundAtual++;
     setTimeout(() => {
       roundCounter.textContent = globalRoundAtual;
       startNewRound();
-    }, 3000); // espera 3s pra próxima pergunta
+    }, 3000);
   } else {
-    // Fim do jogo
     setTimeout(() => {
       finalizeGame();
     }, 3000);
@@ -845,12 +853,19 @@ btnReveal.onclick = async () => {
 };
 
 /************************************************************
- * 11) FIM DO JOGO (HOST)
+ * 11) FINALIZAR PARTIDA
  ************************************************************/
 async function finalizeGame() {
   voteStatus.textContent = "";
   gameArea.classList.add("hidden");
+  btnReveal.classList.add("hidden");
+  btnStartGame.classList.add("hidden");
+  btnEndGame.classList.add("hidden");
+
+  // Exibe fim de jogo
   endGameArea.classList.remove("hidden");
+  salaRef.update({ status: "finished" });
+
   // Monta ranking
   const snap = await playersRef.once('value');
   const data = snap.val() || {};
@@ -858,20 +873,16 @@ async function finalizeGame() {
     return { name: data[pid].name, score: data[pid].score || 0 };
   });
   arr.sort((a,b) => b.score - a.score);
+
   let html = "<h4>Ranking Final</h4>";
-  arr.forEach((player, index) => {
-    html += `<div class="rankingItem"><strong>${index+1}º</strong> - ${player.name}: ${player.score} votos</div>`;
+  arr.forEach((player, i) => {
+    html += `<div class="rankingItem"><strong>${i+1}º</strong> - ${player.name}: ${player.score} votos</div>`;
   });
   rankingArea.innerHTML = html;
-
-  // Atualiza status da sala
-  salaRef.update({
-    status: "finished"
-  });
 }
 
 /************************************************************
- * 12) PLAYER: Mostrar tela e Fluxo
+ * 12) MODO JOGADOR
  ************************************************************/
 function showPlayerSection() {
   initialSection.style.display = "none";
@@ -879,7 +890,7 @@ function showPlayerSection() {
   playerSection.style.display = "block";
 }
 
-/** Botão de "Entrar" na sala digitando ID (caso não tenha ?room=) */
+/** Entrar na sala digitando o ID (se não usou ?room=) */
 btnGoRoom.onclick = () => {
   const rId = inputRoomId.value.trim();
   if (!rId) {
@@ -891,13 +902,13 @@ btnGoRoom.onclick = () => {
   playerJoinArea.classList.remove("hidden");
 };
 
-/** Se já veio com ?room=, pula direto pro joinArea */
+/** Se veio com ?room= */
 if (existingRoomParam) {
   playerRoomIdArea.classList.add("hidden");
   playerJoinArea.classList.remove("hidden");
 }
 
-/** Botão "Participar" (player) */
+/** Botão "Participar" (Player) */
 btnJoinPlayer.onclick = async () => {
   const name = playerNameInput.value.trim();
   if (!name) {
@@ -905,7 +916,7 @@ btnJoinPlayer.onclick = async () => {
     return;
   }
   globalPlayerName = name;
-  // Cria o player no Firebase
+
   salaRef = db.ref("salas/" + globalRoomId);
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
@@ -917,44 +928,37 @@ btnJoinPlayer.onclick = async () => {
     score: 0
   });
 
-  // Acompanha as mudanças de currentQuestion
+  // Escuta pergunta atual
   salaRef.child("currentQuestion").on('value', (snap) => {
     const q = snap.val() || "";
-    if (!q) {
-      currentQuestion.textContent = "(Aguardando início da partida...)";
-    } else {
-      currentQuestion.textContent = q;
-    }
+    currentQuestion.textContent = q || "(Aguardando início da partida...)";
   });
 
-  // Acompanha as mudanças de status (se terminou, etc.)
+  // Escuta status (se terminou)
   salaRef.child("status").on('value', (snap) => {
     const st = snap.val();
     if (st === "finished") {
-      // Bloqueia o player
       voteOptions.innerHTML = "<p>O jogo terminou!</p>";
     }
   });
 
-  // Sempre que a lista de players mudar, atualizar opções de voto
+  // Atualiza botões de voto
   playersRef.on('value', (snap) => {
     const data = snap.val() || {};
     renderVoteOptions(data);
   });
 
-  // Exibe PlayerGameArea
   playerJoinArea.classList.add("hidden");
   playerGameArea.classList.remove("hidden");
   playerRoomIdLabel.textContent = globalRoomId;
   playerNameLabel.textContent = globalPlayerName;
 };
 
-/** Renderizar botões de voto (não pode votar em si mesmo, se quiser) */
+/** Renderiza botões para votar (não votar em si mesmo) */
 function renderVoteOptions(playersObj) {
   voteOptions.innerHTML = "";
-  const pids = Object.keys(playersObj);
-  pids.forEach((pid) => {
-    if (pid === globalPlayerId) return; // se não quiser votar em si mesmo
+  Object.keys(playersObj).forEach((pid) => {
+    if (pid === globalPlayerId) return;
     const btn = document.createElement("button");
     btn.className = "voteButton";
     btn.textContent = playersObj[pid].name;
@@ -963,41 +967,30 @@ function renderVoteOptions(playersObj) {
   });
 }
 
-/** Registrar voto no Firebase */
+/** Registrar voto */
 function voteOnPlayer(targetPid) {
   votesRef.child(globalPlayerId).set(targetPid)
     .then(() => {
       alert("Voto computado em: " + targetPid);
     })
-    .catch((err) => {
-      console.error(err);
-    });
+    .catch(err => console.error(err));
 }
 
 /************************************************************
- * 13) FUNÇÃO PARA MONTAR QUESTION POOL CONFORME MODO
+ * 13) FUNÇÃO PARA CONSTRUIR O ARRAY DE PERGUNTAS CONFORME MODO
  ************************************************************/
 function buildQuestionPool(modo) {
-  // modo: normal, normalPicante, picante
-  let array = [];
   switch(modo) {
     case "normal":
-      array = [...normalQuestions];
-      break;
+      return [...normalQuestions];
     case "picante":
-      array = [...picanteQuestions];
-      break;
+      return [...picanteQuestions];
     case "normalPicante":
-      array = [...normalQuestions, ...picanteQuestions];
-      break;
+      return [...normalQuestions, ...picanteQuestions];
+    default:
+      return [...normalQuestions];
   }
-  return array;
 }
-
-/************************************************************
- * FIM DO SCRIPT
- ************************************************************/
 </script>
-
 </body>
 </html>
