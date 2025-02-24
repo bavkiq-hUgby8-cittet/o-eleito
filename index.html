@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>O Eleito - Versão Completa</title>
+  <meta charset="UTF-8">
+  <title>O Eleito - Versão com Curiosidades & Resultados aos Jogadores</title>
   <style>
     /* ======== ESTILOS GERAIS ======== */
     body {
@@ -24,13 +24,14 @@
       font-size: 1.8rem;
     }
     .container {
-      max-width: 1000px;
+      max-width: 980px;
       margin: 20px auto;
       padding: 20px;
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+
     h2, h3 {
       margin-top: 0;
     }
@@ -47,7 +48,7 @@
       border-radius: 8px;
       padding: 20px;
       background: #fafafa;
-      display: none; /* Inicia escondido, aparece dinamicamente */
+      display: none; /* some até acionado */
     }
     hr {
       margin: 15px 0;
@@ -100,25 +101,28 @@
       max-width: 200px;
     }
 
-    /* Pergunta e votação */
-    #questionDisplay {
-      font-weight: bold;
-      font-size: 1.1rem;
+    /* Área da pergunta + curiosidade */
+    #questionContainer {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .curiosityText {
+      font-style: italic;
+      color: #555;
       margin-bottom: 10px;
     }
-    .voteButton {
-      margin: 5px;
-      background: #28a745;
+    .questionText {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #222;
     }
-    .voteButton:hover {
-      background: #218838;
-    }
+
+    /* Mensagens de resultado */
     .resultHighlight {
       color: #d9534f;
       font-weight: bold;
     }
 
-    /* Ranking final */
     .rankingItem {
       margin: 5px 0;
     }
@@ -157,8 +161,8 @@
       <label for="selectModo">Modo de Perguntas:</label>
       <select id="selectModo">
         <option value="normal">Normal</option>
-        <option value="normalPicante">Normal + Picante</option>
         <option value="picante">Só Picantes</option>
+        <option value="normalPicante">Normal + Picante</option>
       </select>
 
       <label for="selectBebida">Bebida?</label>
@@ -171,10 +175,8 @@
       <select id="selectRodadas">
         <option value="5">5</option>
         <option value="10" selected>10</option>
+        <option value="15">15</option>
         <option value="20">20</option>
-        <option value="30">30</option>
-        <option value="40">40</option>
-        <option value="50">50</option>
       </select>
       <br><br>
       <button id="btnCreateRoom">Criar Sala Agora</button>
@@ -195,7 +197,13 @@
       <!-- Área do jogo em andamento -->
       <div id="gameArea" class="hidden">
         <h3>Rodada: <span id="roundCounter"></span> / <span id="totalRounds"></span></h3>
-        <div id="questionDisplay"></div>
+
+        <!-- Container central da curiosidade + pergunta -->
+        <div id="questionContainer">
+          <div class="curiosityText" id="curiosityText"></div>
+          <div class="questionText" id="questionText"></div>
+        </div>
+
         <p id="voteStatus"></p>
         <button id="btnReveal" class="hidden">Revelar Resultado</button>
         <div id="resultArea"></div>
@@ -226,10 +234,19 @@
 
     <div id="playerGameArea" class="hidden">
       <h3>Sala: <span id="playerRoomIdLabel"></span></h3>
-      <p>Olá, <span id="playerNameLabel"></span>! Aguarde a próxima pergunta...</p>
-      <div id="currentQuestion"></div>
+      <p>Olá, <span id="playerNameLabel"></span>!</p>
+
+      <!-- Exibir curiosidade e pergunta também ao jogador -->
+      <div id="playerQuestionContainer" style="text-align: center; margin: 20px 0;">
+        <div class="curiosityText" id="playerCuriosityText"></div>
+        <div class="questionText" id="playerQuestionText"></div>
+      </div>
+
       <h4>Vote em quem você acha que se encaixa:</h4>
       <div id="voteOptions"></div>
+
+      <!-- Exibir resultado aqui também -->
+      <div id="playerResultArea" style="margin-top: 15px; color:#b00;"></div>
     </div>
   </div>
 </div>
@@ -240,347 +257,76 @@
 
 <script>
 /************************************************************
- * 1) CONFIGURAR O FIREBASE AQUI, COM SUAS CREDENCIAIS
+ * 1) CONFIGURAR O FIREBASE COM SUAS CREDENCIAIS
  ************************************************************/
-/* 
-   Certifique-se de que "databaseURL" corresponde ao seu 
-   Realtime Database (URL exato).
-*/
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCEKt94I164HQG5C8hypgFDqnfU0sztBZo",
-  authDomain: "sampleapp-7d986.firebaseapp.com",
-  databaseURL: "https://sampleapp-7d986-default-rtdb.firebaseio.com/",
-  projectId: "sampleapp-7d986",
-  storageBucket: "sampleapp-7d986.firebasestorage.app",
-  messagingSenderId: "747030699327",
-  appId: "1:747030699327:web:752a57da0289692e17c78a"
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com/",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /************************************************************
- * 2) ARRAYS DE PERGUNTAS (NORMAL E PICANTE) - 300 TOTAL
+ * 2) ARMAZENAR PRÓXIMO NÚMERO DE SALA (Sala_01, Sala_02...)
+ *    Precisamos de um "contador" global no Realtime Database.
+ *    Você pode criar manualmente "salaCount": 0 no console
+ *    ou deixar o código criar se não existir.
  ************************************************************/
-
-/* === 200 PERGUNTAS NORMAIS === */
-const normalQuestions = [
-  // (1–50)
-  "Quem você acha que se mudaria para um país desconhecido sem hesitar?",
-  "Quem você acha que toparia escalar o Everest só pela aventura?",
-  "Quem você acha que seria o(a) mais dramático(a) se perdesse o celular?",
-  "Quem você acha que poderia virar um(a) grande chef de cozinha?",
-  "Quem você acha que seria a pessoa mais tranquila em um apocalipse zumbi?",
-  "Quem você acha que viraria meme da internet em dois segundos?",
-  "Quem você acha que gastaria todo o salário em coisas inúteis?",
-  "Quem você acha que faria uma road trip sem planejar nada?",
-  "Quem você acha que mais demoraria no banho?",
-  "Quem você acha que tentaria aprender a tocar um instrumento em um dia e desistiria?",
-  "Quem você acha que escreveria um livro sobre a própria vida?",
-  "Quem você acha que viraria um(a) viciado(a) em séries e ficaria horas maratonando?",
-  "Quem você acha que toparia trabalhar em um circo?",
-  "Quem você acha que abriria uma ONG de proteção a animais abandonados?",
-  "Quem você acha que daria um “golpe de estado” num jogo de tabuleiro?",
-  "Quem você acha que levaria mais tempo pra arrumar as malas pra uma viagem?",
-  "Quem você acha que poderia se dar bem como dublador(a)?",
-  "Quem você acha que seria o(a) mais animado(a) em planejar uma festa surpresa?",
-  "Quem você acha que faria um canal de pegadinhas no YouTube?",
-  "Quem você acha que seria selecionado para um reality show de sobrevivência?",
-  "Quem você acha que viraria amigo(a) de todo mundo em uma viagem de trem?",
-  "Quem você acha que esqueceria a carteira e teria que pedir emprestado ao grupo?",
-  "Quem você acha que pintaria o cabelo de uma cor super chamativa, tipo rosa?",
-  "Quem você acha que seria capaz de virar vegan por uma semana sem sofrer?",
-  "Quem você acha que seria presidente da república?",
-  "Quem você acha que se machucaria fazendo um TikTok de dança?",
-  "Quem você acha que choraria assistindo a qualquer filme romântico?",
-  "Quem você acha que toparia fazer bungee jump sem pensar?",
-  "Quem você acha que seria influencer digital de maquiagem?",
-  "Quem você acha que se perderia em um shopping e ficaria sem celular?",
-  "Quem você acha que ficaria mais irritado(a) sem café?",
-  "Quem você acha que tentaria domar um leão se recebesse um bom dinheiro?",
-  "Quem você acha que teria um cachorro com nome bizarro?",
-  "Quem você acha que entraria em uma competição de dança de salão?",
-  "Quem você acha que viraria professor(a) de ioga?",
-  "Quem você acha que brigaria com o GPS por estar dando instruções erradas?",
-  "Quem você acha que se voluntariaria para ser um dos primeiros a viver em Marte?",
-  "Quem você acha que venceria um concurso de karaokê?",
-  "Quem você acha que desistiria de tudo para seguir a carreira de cantor(a)?",
-  "Quem você acha que viajaria para o Japão só para conhecer a culinária local?",
-  "Quem você acha que adotaria mais de três gatos de uma vez?",
-  "Quem você acha que seria capaz de ficar sem WhatsApp por uma semana numa boa?",
-  "Quem você acha que faria questão de ter seu próprio programa de TV?",
-  "Quem você acha que seria o(a) melhor conselheiro(a) amoroso(a)?",
-  "Quem você acha que seria o(a) último(a) a sair do bar?",
-  "Quem você acha que se vestiria de cosplay em qualquer evento?",
-  "Quem você acha que levaria a vida de nômade digital sem problemas?",
-  "Quem você acha que comeria comida exótica tipo escorpião frito?",
-  "Quem você acha que teria um hábito curioso de sono, tipo falar dormindo?",
-  "Quem você acha que levaria um jogo de tabuleiro para a balada?",
-  // (51–100)
-  "Quem você acha que viraria o(a) “palhaço(a)” da festa sempre?",
-  "Quem você acha que é o(a) mais corajoso(a) pra uma prova de resistência física?",
-  "Quem você acha que compraria um item bizarro em um leilão só pela história?",
-  "Quem você acha que seria o(a) maior “cabeça de vento” do grupo?",
-  "Quem você acha que teria sucesso abrindo um food truck?",
-  "Quem você acha que não resistiria a um festival de música?",
-  "Quem você acha que tentaria aprender dança de salão pra impressionar alguém?",
-  "Quem você acha que faria o melhor stand-up comedy?",
-  "Quem você acha que se casaria em Las Vegas do nada?",
-  "Quem você acha que passaria um trote na própria mãe?",
-  "Quem você acha que entraria em um carro de corrida e pisaria fundo?",
-  "Quem você acha que se tornaria treinador(a) de algum esporte inusitado?",
-  "Quem você acha que poderia começar uma coleção estranha, tipo miniaturas de cadeiras?",
-  "Quem você acha que se daria melhor como coach de vida?",
-  "Quem você acha que formaria dupla sertaneja de brincadeira?",
-  "Quem você acha que ficaria mais empolgado(a) com um show do artista favorito?",
-  "Quem você acha que seria “cancelado(a)” rapidamente se fosse famoso(a)?",
-  "Quem você acha que choraria de rir com um vídeo de pegadinhas?",
-  "Quem você acha que faria um curso de DJ e largaria tudo pra tocar em festas?",
-  "Quem você acha que seria o(a) mais tranquilo(a) num jogo de “Verdade ou Desafio”?",
-  "Quem você acha que tentaria aprender todos os passos de uma coreografia de K-pop?",
-  "Quem você acha que pintaria um quadro digno de pendurar na sala?",
-  "Quem você acha que abriria um bar temático e faria sucesso?",
-  "Quem você acha que usaria fantasias engraçadas no dia a dia?",
-  "Quem você acha que cozinharia um banquete pra família inteira no domingo?",
-  "Quem você acha que aprenderia a falar três idiomas diferentes por hobby?",
-  "Quem você acha que escreveria uma carta de amor super dramática?",
-  "Quem você acha que gostaria de dar uma de “personal stylist” pros amigos?",
-  "Quem você acha que se perderia assistindo documentários de madrugada?",
-  "Quem você acha que teria coragem de viajar de carona só pra economizar?",
-  "Quem você acha que entraria em um concurso de cosplay de anime?",
-  "Quem você acha que assistiria a uma saga de filmes inteiros em um único dia?",
-  "Quem você acha que organizaria um piquenique pra todos os amigos sem motivo especial?",
-  "Quem você acha que se tornaria um(a) guru espiritual?",
-  "Quem você acha que poderia pilotar um avião sem medo?",
-  "Quem você acha que faria um intercâmbio em outro continente só por aventura?",
-  "Quem você acha que ficaria sem dormir jogando videogame?",
-  "Quem você acha que sempre tem uma anedota ou curiosidade bizarra pra contar?",
-  "Quem você acha que resolveria um cubo mágico mais rápido?",
-  "Quem você acha que tentaria convencer todos a irem a uma festa fantasia?",
-  "Quem você acha que falaria mais gírias engraçadas que ninguém entende?",
-  "Quem você acha que filmaria cada minuto de uma viagem e postaria stories?",
-  "Quem você acha que daria uma de “especialista” em signos?",
-  "Quem você acha que toparia ser voluntário(a) para uma campanha social?",
-  "Quem você acha que venderia tudo e viraria mochileiro(a) pelo mundo?",
-  "Quem você acha que teria um surto na fila de um show muito cheio?",
-  "Quem você acha que faria amizade com um estranho no transporte público?",
-  "Quem você acha que participaria de um protesto ou manifestação importante?",
-  "Quem você acha que usaria uma roupa super extravagante num evento chique?",
-  "Quem você acha que fundaria uma startup de tecnologia?",
-  // (101–150)
-  "Quem você acha que se meteria a fazer freestyle de rap em público?",
-  "Quem você acha que viraria o(a) “DJ oficial” das viagens de carro?",
-  "Quem você acha que colecionaria livros raros ou edições limitadas?",
-  "Quem você acha que acordaria cedo pra correr na praia sem reclamar?",
-  "Quem você acha que compraria um item caríssimo e depois se arrependeria?",
-  "Quem você acha que usaria fantasia de super-herói(a) no dia do próprio aniversário?",
-  "Quem você acha que faria uma série de podcasts com as histórias do grupo?",
-  "Quem você acha que seria mais viciado(a) em café?",
-  "Quem você acha que tremeria todo só de pensar em falar em público?",
-  "Quem você acha que passaria a noite pesquisando teorias da conspiração?",
-  "Quem você acha que organizaria o guarda-roupa por cor e ficaria orgulhoso(a)?",
-  "Quem você acha que não perde a oportunidade de fazer uma piada?",
-  "Quem você acha que sairia pra correr uma maratona sem treino prévio?",
-  "Quem você acha que se perderia num parque de diversões gigante?",
-  "Quem você acha que faria um cosplay de Star Wars ou Harry Potter tranquilamente?",
-  "Quem você acha que ficaria famoso(a) por um talento bizarro, tipo assoviar com os dedos?",
-  "Quem você acha que se candidataria a síndico(a) do prédio?",
-  "Quem você acha que teria um diário secreto até hoje?",
-  "Quem você acha que se ofereceria para cuidar de várias plantas e acabaria matando todas?",
-  "Quem você acha que é o(a) mais provável a fundar uma banda de garagem?",
-  "Quem você acha que viraria o(a) “faz-tudo” quando alguém precisa de ajuda?",
-  "Quem você acha que se atrapalharia com roteiros de viagem e chegaria no lugar errado?",
-  "Quem você acha que teria os melhores memes salvos no celular?",
-  "Quem você acha que demoraria mais pra acreditar que viu um extraterrestre?",
-  "Quem você acha que seria a melhor pessoa pra planejar uma festa de casamento?",
-  "Quem você acha que ficaria apaixonado(a) por um personagem fictício?",
-  "Quem você acha que seria mais propenso(a) a dormir no meio de um filme?",
-  "Quem você acha que se meteria a fazer cerâmica como novo hobby?",
-  "Quem você acha que tiraria a carteira de motorista e teria mais medo de dirigir?",
-  "Quem você acha que passaria um dia inteiro no spa só relaxando?",
-  "Quem você acha que compraria todos os tipos de gadgets de tecnologia?",
-  "Quem você acha que cuidaria melhor de um animal de estimação exótico?",
-  "Quem você acha que viveria sem celular na maior tranquilidade?",
-  "Quem você acha que seria a pessoa mais perfeccionista do grupo?",
-  "Quem você acha que tentaria aprender a surfar mesmo sem saber nadar bem?",
-  "Quem você acha que falaria sobre política sem parar em qualquer reunião de família?",
-  "Quem você acha que faria um passeio de balão e adoraria a vista?",
-  "Quem você acha que seria mais “mão de vaca” na hora de dividir a conta?",
-  "Quem você acha que se apaixonaria por alguém que conheceu numa viagem?",
-  "Quem você acha que venceria uma competição de piadas ruins?",
-  "Quem você acha que pediria um lanche estranho tipo pizza de chocolate com açaí?",
-  "Quem você acha que iria num evento cheio de celebridades e se comportaria naturalmente?",
-  "Quem você acha que se aventuraria em um cruzeiro pela Antártica?",
-  "Quem você acha que teria mais sucesso fazendo vídeos de gameplay?",
-  "Quem você acha que doaria parte do salário pra uma causa nobre sem pensar?",
-  "Quem você acha que viveria de Airbnb viajando de cidade em cidade?",
-  "Quem você acha que seria a pessoa mais zen e calma numa situação de estresse?",
-  "Quem você acha que sempre escolhe a coisa mais estranha do cardápio pra comer?",
-  "Quem você acha que deixaria tudo pra fazer um retiro espiritual no meio do nada?",
-  "Quem você acha que chegaria atrasado(a) até na própria festa de aniversário?",
-  // (151–200)
-  "Quem você acha que seria o(a) “coach motivacional” do grupo?",
-  "Quem você acha que levaria super a sério a organização de um Amigo Secreto?",
-  "Quem você acha que conheceria todo mundo de um hostel durante uma viagem?",
-  "Quem você acha que aprenderia artes marciais para se defender?",
-  "Quem você acha que poderia passar o dia jogando videogame sem culpa?",
-  "Quem você acha que trocaria de emprego todo ano?",
-  "Quem você acha que se emocionaria num show ao vivo de uma banda favorita?",
-  "Quem você acha que seria o(a) mais preguiçoso(a) num domingo chuvoso?",
-  "Quem você acha que se meteria a escrever poesias secretas?",
-  "Quem você acha que aceitaria um encontro às cegas por pura diversão?",
-  "Quem você acha que não larga o celular nem durante o banho?",
-  "Quem você acha que tentaria adoçar o café dos outros sem ninguém perceber?",
-  "Quem você acha que compraria ingressos para o Rock in Rio e nem gosta de rock?",
-  "Quem você acha que cozinharia para o(a) crush só pra impressionar?",
-  "Quem você acha que daria a melhor festa de Halloween?",
-  "Quem você acha que escreveria um roteiro de filme de comédia?",
-  "Quem você acha que seria o(a) primeiro(a) a correr em um paintball?",
-  "Quem você acha que teria um perfil secreto nas redes sociais?",
-  "Quem você acha que usaria looks malucos só pela liberdade de expressão?",
-  "Quem você acha que já sonhou em ser astronauta e viajar pro espaço?",
-  "Quem você acha que fingiria ter entendido uma piada só pra não ficar sem graça?",
-  "Quem você acha que não conseguiria guardar um segredo por muito tempo?",
-  "Quem você acha que tiraria uma soneca no meio de uma reunião importante?",
-  "Quem você acha que faria sucesso como fotógrafo(a)?",
-  "Quem você acha que apresentaria um programa de auditório cheio de brincadeiras?",
-  "Quem você acha que investiria em ações de empresas de tecnologia?",
-  "Quem você acha que toparia fazer parte de um flash mob no meio da rua?",
-  "Quem você acha que viraria “fazendeiro(a)” e adotaria a vida no campo?",
-  "Quem você acha que consegue conciliar mais de dois projetos ao mesmo tempo?",
-  "Quem você acha que planeja cada detalhe da rotina, tipo planilha pra tudo?",
-  "Quem você acha que improvisaria um rap sobre o grupo?",
-  "Quem você acha que é o(a) mais competitivo(a) em jogos de tabuleiro?",
-  "Quem você acha que tentaria viver apenas de arte e música, sem um trabalho fixo?",
-  "Quem você acha que moraria em uma tiny house sustentável?",
-  "Quem você acha que subiria num palco para falar diante de mil pessoas?",
-  "Quem você acha que seria hipnotizado(a) facilmente num show de hipnose?",
-  "Quem você acha que faria amizade até com o(a) motorista do app de transporte?",
-  "Quem você acha que conversaria com desconhecidos na fila do supermercado?",
-  "Quem você acha que falaria latim se tivesse a chance de aprender?",
-  "Quem você acha que tentaria virar minimalista, vivendo com pouquíssimos itens?",
-  "Quem você acha que faria o melhor cosplay de um personagem de games?",
-  "Quem você acha que mais “stalkeia” os outros nas redes sociais?",
-  "Quem você acha que toparia dormir em um hotel mal-assombrado?",
-  "Quem você acha que levaria uma bola de vôlei pra todo lugar, só pra jogar?",
-  "Quem você acha que participaria de um concurso gastronômico de quem come mais?",
-  "Quem você acha que se vestiria de Papai Noel para as crianças?",
-  "Quem você acha que toparia fazer trabalho voluntário em outro país?",
-  "Quem você acha que seria o(a) “pai/mãe” do rolê, cuidando de todo mundo?",
-  "Quem você acha que reviraria cada brechó da cidade em busca de roupas vintages?",
-  "Quem você acha que é o(a) mais viciado(a) em tecnologia e gadgets de última geração?"
-];
-
-/* === 100 PERGUNTAS PICANTES === */
-const picanteQuestions = [
-  // (1–50)
-  "Quem você acha que toparia ir a uma praia de nudismo sem hesitar?",
-  "Quem você acha que teria coragem de beijar alguém aleatório numa festa?",
-  "Quem você acha que ficaria com dois contatinhos no mesmo dia?",
-  "Quem você acha que teria um “crush proibido” sem conseguir esconder por muito tempo?",
-  "Quem você acha que é o(a) maior beijoqueiro(a) do grupo?",
-  "Quem você acha que mandaria uma mensagem ousada pra pessoa errada?",
-  "Quem você acha que usaria uma fantasia sensual em uma ocasião especial?",
-  "Quem você acha que faria um strip-tease de brincadeira só pra provocar risadas?",
-  "Quem você acha que teria um “ficante fixo” em cada cidade que visitar?",
-  "Quem você acha que se arriscaria num encontro às cegas só pela adrenalina?",
-  "Quem você acha que ficaria até tarde conversando com o(a) ex por saudade?",
-  "Quem você acha que já teve um sonho picante com alguém do grupo?",
-  "Quem você acha que tentaria seduzir alguém com um jantar romântico?",
-  "Quem você acha que ficaria mais à vontade em um clube de swing (só pra conhecer)?",
-  "Quem você acha que tem mais chance de gostar de umas “aventuras diferentes” na cama?",
-  "Quem você acha que falaria sem pudor sobre a vida íntima?",
-  "Quem você acha que trocaria mensagens quentes durante o expediente de trabalho?",
-  "Quem você acha que já fez “sexting” pra esquentar a relação?",
-  "Quem você acha que adoraria fazer uma tatuagem em local estratégico?",
-  "Quem você acha que precisa de pouca desculpa pra tirar a camisa?",
-  "Quem você acha que entraria num aplicativo de namoro só por curiosidade?",
-  "Quem você acha que toparia experimentar brinquedinhos na hora H?",
-  "Quem você acha que aprontaria algo ousado num voo durante as férias?",
-  "Quem você acha que teria zero vergonha de conversar sobre fetiches?",
-  "Quem você acha que viajaria pra um destino paradisíaco em busca de romance?",
-  "Quem você acha que já saiu com mais de uma pessoa da mesma família (sem saber)?",
-  "Quem você acha que adoraria receber uma massagem beeeem relaxante?",
-  "Quem você acha que se declarou pra alguém depois de umas taças de vinho?",
-  "Quem você acha que seria o(a) mais atrevido(a) pra dançar coladinho na balada?",
-  "Quem você acha que assistiria a um show de stripper sem piscar?",
-  "Quem você acha que faz joguinhos de sedução só por diversão?",
-  "Quem você acha que daria um beijo cinematográfico na frente de todo mundo?",
-  "Quem você acha que tentaria reconquistar um ex só pelo desafio?",
-  "Quem você acha que flertaria com alguém comprometido (sem saber)?",
-  "Quem você acha que adora falar sobre posições e dicas picantes abertamente?",
-  "Quem você acha que teria coragem de tirar fotos sensuais?",
-  "Quem você acha que leva jeito pra fazer pole dance?",
-  "Quem você acha que já se arrependeu de um encontro super quente?",
-  "Quem você acha que é mais “namorador(a)” e tá sempre saindo com alguém novo?",
-  "Quem você acha que fingiria estar dormindo só pra evitar uma DR?",
-  "Quem você acha que faria um ménage se tivesse oportunidade?",
-  "Quem você acha que puxaria assunto picante no meio de uma roda de conversa?",
-  "Quem você acha que sempre foi o(a) maior conquistador(a) na adolescência?",
-  "Quem você acha que contaria os detalhes mais picantes de um encontro sem pudores?",
-  "Quem você acha que beijaria de surpresa só pra testar reações?",
-  "Quem você acha que faria uma viagem de casal com clima 100% romance e sedução?",
-  "Quem você acha que se acha o(a) mais irresistível?",
-  "Quem você acha que toparia um “rapidinho” em um lugar inusitado?",
-  "Quem você acha que compraria lingeries ou roupas íntimas pra esquentar o clima?",
-  "Quem você acha que contaria um fetiche secreto sem problemas?",
-  // (51–100)
-  "Quem você acha que se arriscaria em um aplicativo de paquera bem alternativo?",
-  "Quem você acha que riria de nervoso ao receber um nude inesperado?",
-  "Quem você acha que dedicaria uma música romântica pra alguém especial em público?",
-  "Quem você acha que faria um “strip poker” entre amigos (se fosse permitido)?",
-  "Quem você acha que se envolveria em um triângulo amoroso sem querer?",
-  "Quem você acha que tem um jeito irresistível de puxar papo?",
-  "Quem você acha que veria um filme erótico sem ficar sem graça?",
-  "Quem você acha que tem as melhores cantadas, mesmo que sejam bobas?",
-  "Quem você acha que adoraria mandar áudios picantes pro(a) parceiro(a)?",
-  "Quem você acha que investiria em lingeries de luxo?",
-  "Quem você acha que perdeu a conta de quantas vezes foi pra balada paquerar?",
-  "Quem você acha que lembra todos os detalhes de um momento íntimo?",
-  "Quem você acha que teria coragem de participar de um concurso de beijos?",
-  "Quem você acha que entrou em um app de namoro e se divertiu horrores?",
-  "Quem você acha que é capaz de ter fantasias românticas inusitadas?",
-  "Quem você acha que foge de relacionamento sério por gostar de liberdade?",
-  "Quem você acha que adoraria testar jogos de “verdade ou desafio” adultos?",
-  "Quem você acha que surpreenderia o(a) parceiro(a) com um presente picante?",
-  "Quem você acha que trocaria carícias em público sem ficar tímido(a)?",
-  "Quem você acha que não vê problema em ficar com colegas de trabalho?",
-  "Quem você acha que já foi pego(a) no flagra em um momento de intimidade?",
-  "Quem você acha que adora quando as coisas “fogem do controle” na paquera?",
-  "Quem você acha que faz aquela “voz sexy” quando quer conquistar alguém?",
-  "Quem você acha que manteria uma relação aberta numa boa?",
-  "Quem você acha que costuma provocar no WhatsApp com mensagens ousadas?",
-  "Quem você acha que se declararia em alto e bom som numa festa lotada?",
-  "Quem você acha que dormiria de conchinha com qualquer crush?",
-  "Quem você acha que se rende fácil a uma boa massagem nos pés?",
-  "Quem você acha que ficaria sem graça ao ganhar um presente íntimo na frente de todo mundo?",
-  "Quem você acha que tiraria a roupa num momento de “calor” numa festa?",
-  "Quem você acha que adoraria receber um bolo de chocolate na cama como surpresa romântica?",
-  "Quem você acha que é fã de “carinho no pescoço”?",
-  "Quem você acha que se sentiria bem em frequentar um bar LGBT e conhecer gente nova?",
-  "Quem você acha que teria um estoque de velas aromáticas pra criar clima?",
-  "Quem você acha que ficaria doido(a) de ciúmes se visse o(a) parceiro(a) com outro(a)?",
-  "Quem você acha que curte trocar áudios mais calientes do que textões?",
-  "Quem você acha que abriria um canal no YouTube pra falar de relacionamentos?",
-  "Quem você acha que tentaria algum swing só pela experiência?",
-  "Quem você acha que aceitaria passar um fim de semana inteiro trancado(a) com o(a) crush?",
-  "Quem você acha que leria contos eróticos antes de dormir?",
-  "Quem você acha que ficaria fazendo carícias na perna de quem tá do lado?",
-  "Quem você acha que acha (ou achou) sexy alguém do grupo?",
-  "Quem você acha que contaria que já fez algo muito doido numa festa?",
-  "Quem você acha que teria um “clubinho secreto” de segredos picantes?",
-  "Quem você acha que adoraria um encontro regado a morangos e chantilly?",
-  "Quem você acha que faz joguinhos de conquista até com o(a) parceiro(a) fixo(a)?",
-  "Quem você acha que toparia fazer um ensaio fotográfico boudoir?",
-  "Quem você acha que seria o(a) mais fofo(a) na hora de dar carinho após a intimidade?",
-  "Quem você acha que não resiste a uma “troca de olhares” e já se entrega?",
-  "Quem você acha que, no fundo, é o(a) mais safadinho(a) do rolê?"
-];
+function criarNovaSala() {
+  return db.ref('salaCount').transaction((valorAtual) => {
+    if (valorAtual === null) valorAtual = 0;
+    return valorAtual + 1;
+  }).then((result) => {
+    const salaNum = result.snapshot.val();
+    return "Sala_" + String(salaNum).padStart(2, '0');
+  });
+}
 
 /************************************************************
- * 3) ELEMENTOS DO DOM E VARIÁVEIS GLOBAIS
+ * 3) PERGUNTAS + CURIOSIDADES (Exemplo com poucas)
+ *    Você deve expandir conforme desejar.
+ *    Cada entrada: { question: "...", curiosity: "..." }
  ************************************************************/
+const normalQuestions = [
+  { 
+    question: "Quem você acha que escalaria o Everest sem pensar?", 
+    curiosity: "Curiosidade: O Monte Everest tem quase 9.000 metros de altitude."
+  },
+  { 
+    question: "Quem você acha que viraria meme da internet em dois segundos?", 
+    curiosity: "Sabia que mais de 70% dos memes surgem no Twitter?"
+  },
+  { 
+    question: "Quem você acha que largaria tudo para viajar o mundo de mochila?", 
+    curiosity: "Curiosidade: 'Mochilão' é uma das formas mais baratas de conhecer vários países."
+  }
+];
+
+const picanteQuestions = [
+  { 
+    question: "Quem você acha que iria pra uma praia de nudismo sem hesitar?", 
+    curiosity: "Curiosidade: Praias de nudismo são populares na Europa, especialmente na França."
+  },
+  { 
+    question: "Quem você acha que beijaria alguém aleatório numa festa?", 
+    curiosity: "Você sabia que existem mais de 20 tipos de beijos catalogados em estudos culturais?"
+  }
+];
+
+// Exemplo “Normal + Picantes”: basta concatenar
+// (vamos fazer na função buildQuestionPool)
+
+/************************************************************
+ * 4) ELEMENTOS DO DOM E VARIÁVEIS GLOBAIS
+ ************************************************************/
+// Seções
 const initialSection = document.getElementById('initialSection');
 const hostSection = document.getElementById('hostSection');
 const playerSection = document.getElementById('playerSection');
@@ -598,7 +344,6 @@ const connectedPlayers = document.getElementById('connectedPlayers');
 const btnStartGame = document.getElementById('btnStartGame');
 const btnEndGame = document.getElementById('btnEndGame');
 const gameArea = document.getElementById('gameArea');
-const questionDisplay = document.getElementById('questionDisplay');
 const voteStatus = document.getElementById('voteStatus');
 const btnReveal = document.getElementById('btnReveal');
 const resultArea = document.getElementById('resultArea');
@@ -606,6 +351,8 @@ const endGameArea = document.getElementById('endGameArea');
 const rankingArea = document.getElementById('rankingArea');
 const roundCounter = document.getElementById('roundCounter');
 const totalRounds = document.getElementById('totalRounds');
+const curiosityText = document.getElementById('curiosityText');
+const questionText = document.getElementById('questionText');
 
 // Player
 const inputRoomId = document.getElementById('inputRoomId');
@@ -616,8 +363,10 @@ const btnJoinPlayer = document.getElementById('btnJoinPlayer');
 const playerGameArea = document.getElementById('playerGameArea');
 const playerRoomIdLabel = document.getElementById('playerRoomIdLabel');
 const playerNameLabel = document.getElementById('playerNameLabel');
-const currentQuestion = document.getElementById('currentQuestion');
+const playerCuriosityText = document.getElementById('playerCuriosityText');
+const playerQuestionText = document.getElementById('playerQuestionText');
 const voteOptions = document.getElementById('voteOptions');
+const playerResultArea = document.getElementById('playerResultArea');
 
 // Botões “Sou Host” e “Sou Player”
 const btnHost = document.getElementById('btnHost');
@@ -631,108 +380,120 @@ let globalPlayerId = null;
 let globalPlayerName = "";
 let globalModo = "normal"; 
 let globalBebida = "com";
-let globalNumRodadas = 10; 
+let globalNumRodadas = 5; 
 let globalRoundAtual = 0;
 let playersRef = null;
 let votesRef = null;
 let salaRef = null; 
 
-// Array de perguntas selecionado
+// Array de perguntas (cada item = { question, curiosity })
 let questionPool = [];
+// Índices de perguntas já usadas
 let usedQuestionIndexes = [];
 
 /************************************************************
- * 4) DETECTAR SE TEM ?room= NO LINK
+ * 5) DETECTAR SE TEM ?room=XXX NO LINK
  ************************************************************/
 const urlParams = new URLSearchParams(window.location.search);
-const existingRoomParam = urlParams.get('room'); 
+const existingRoomParam = urlParams.get('room');
 if (existingRoomParam) {
-  // Se tem ?room=XXX, assume que é Player
+  // Então é jogador
   globalRoomId = existingRoomParam;
   showPlayerSection();
 } else {
-  // Se não tem ?room=, exibe a tela inicial
+  // Se não tem, mostra escolha inicial
   initialSection.style.display = "block";
 }
 
 /************************************************************
- * 5) Botões da tela inicial
+ * 6) Botões da Tela Inicial
  ************************************************************/
 btnHost.onclick = () => {
   initialSection.style.display = "none";
   hostSection.style.display = "block";
 };
-
 btnPlayer.onclick = () => {
   initialSection.style.display = "none";
   playerSection.style.display = "block";
 };
 
 /************************************************************
- * 6) HOST CRIAR SALA
+ * 7) HOST: CRIAR SALA
  ************************************************************/
-btnCreateRoom.onclick = () => {
-  globalModo = selectModo.value;   // normal, normalPicante, picante
-  globalBebida = selectBebida.value; // com, sem
+btnCreateRoom.onclick = async () => {
+  globalModo = selectModo.value;
+  globalBebida = selectBebida.value;
   globalNumRodadas = parseInt(selectRodadas.value);
 
   // Monta array de perguntas
   questionPool = buildQuestionPool(globalModo);
   usedQuestionIndexes = [];
 
-  // Gera ID e salva no Firebase
-  globalRoomId = "ROOM" + Math.floor(Math.random() * 1000000);
+  // Gera ID da sala via contador global
+  const salaGerada = await criarNovaSala(); // ex: "Sala_01"
+  globalRoomId = salaGerada;
   globalIsHost = true;
 
+  // Cria refs
   salaRef = db.ref("salas/" + globalRoomId);
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
 
+  // Grava dados iniciais da sala
   salaRef.set({
     modo: globalModo,
     bebida: globalBebida,
     numRodadas: globalNumRodadas,
     status: "waiting",
-    currentQuestion: "",
+    currentQuestion: null,
     round: 0,
+    lastResult: "",
     createdAt: Date.now()
   });
 
-  // Exibe roomInfo
-  roomInfo.classList.remove("hidden");
+  // Atualiza tela
+  roomInfo.classList.remove('hidden');
   roomIdLabel.textContent = globalRoomId;
 
   const fullLink = window.location.origin + window.location.pathname + "?room=" + globalRoomId;
   roomLink.textContent = fullLink;
 
-  // Gerar QR code (via Google Charts)
+  // Gera QR code (Google Charts)
   const qrApi = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" + encodeURIComponent(fullLink);
   qrCodeImg.src = qrApi;
 
-  // Escuta jogadores
+  // Escuta jogadores conectados
   playersRef.on("value", (snap) => {
     const data = snap.val() || {};
     renderPlayerList(data);
   });
 
-  // Esconde config e mostra botões
+  // Ao host também interessa quando lastResult mudar (pra atualizar em tempo real, se quiser)
+  salaRef.child("lastResult").on("value", (snap) => {
+    const txt = snap.val() || "";
+    if (txt !== "") {
+      resultArea.innerHTML = txt;
+    }
+  });
+
+  // Esconde config, mostra botões
   document.getElementById('configSection').classList.add('hidden');
   btnStartGame.classList.remove('hidden');
   btnEndGame.classList.remove('hidden');
 };
 
-/** Exibe lista de jogadores */
+/** Renderiza lista de jogadores */
 function renderPlayerList(playersObj) {
   connectedPlayers.innerHTML = "";
-  Object.keys(playersObj).forEach((pid) => {
-    const li = document.createElement("li");
+  Object.keys(playersObj).forEach(pid => {
+    const li = document.createElement('li');
     li.textContent = playersObj[pid].name;
     connectedPlayers.appendChild(li);
   });
 }
 
 /************************************************************
- * 7) INICIAR PARTIDA
+ * 8) INICIAR PARTIDA
  ************************************************************/
 btnStartGame.onclick = () => {
   salaRef.update({
@@ -740,45 +501,47 @@ btnStartGame.onclick = () => {
     round: 1
   });
   globalRoundAtual = 1;
-  btnStartGame.classList.add("hidden");
-  gameArea.classList.remove("hidden");
-  endGameArea.classList.add("hidden");
-  totalRounds.textContent = globalNumRodadas;
-  roundCounter.textContent = globalRoundAtual;
+  btnStartGame.classList.add('hidden');
+  gameArea.classList.remove('hidden');
+  endGameArea.classList.add('hidden');
+  totalRounds.textContent = globalNumRodadas.toString();
+  roundCounter.textContent = globalRoundAtual.toString();
 
   startNewRound();
 };
 
-/************************************************************
- * 8) ENCERRAR PARTIDA (BOTÃO NOVO)
- ************************************************************/
+/** Encerrar Partida Manualmente (Host) */
 btnEndGame.onclick = () => {
-  finalizeGame(); // chama o fluxo final imediatamente
+  finalizeGame();
 };
 
 /************************************************************
- * 9) NOVA RODADA: sortear pergunta, limpar votos
+ * 9) SORTEAR PERGUNTA E MOSTRAR (HOST)
  ************************************************************/
 function startNewRound() {
-  votesRef.set({});
+  votesRef.set({});    // limpa votos
   resultArea.innerHTML = "";
-  btnReveal.classList.remove("hidden");
+  salaRef.child("lastResult").set(""); // limpa o lastResult
+  btnReveal.classList.remove('hidden');
   voteStatus.textContent = "Aguardando votos...";
 
-  // Sortear pergunta
+  // Pega pergunta + curiosidade
   const idx = getUniqueRandomIndex();
-  const question = questionPool[idx];
+  const objPerg = questionPool[idx];
+  curiosityText.textContent = objPerg.curiosity;
+  questionText.textContent = objPerg.question;
 
-  questionDisplay.textContent = question;
+  // Salva no Firebase
   salaRef.update({
-    currentQuestion: question
+    currentQuestion: objPerg,
+    lastResult: ""
   });
 }
 
-/** Sorteia um índice de questionPool que não foi usado ainda */
+/** Gera índice único */
 function getUniqueRandomIndex() {
-  if (usedQuestionIndexes.length === questionPool.length) {
-    // Se já usou tudo, faz um "resorteio" livre
+  if (usedQuestionIndexes.length >= questionPool.length) {
+    // Se já acabou, recomeça ou faz do jeito que preferir
     return Math.floor(Math.random() * questionPool.length);
   }
   let idx = Math.floor(Math.random() * questionPool.length);
@@ -790,21 +553,21 @@ function getUniqueRandomIndex() {
 }
 
 /************************************************************
- * 10) REVELAR RESULTADO DA RODADA
+ * 10) REVELAR RESULTADO
  ************************************************************/
 btnReveal.onclick = async () => {
   const snap = await votesRef.once('value');
   const votesData = snap.val() || {};
-  // Contabiliza
+  // Contar votos
   const count = {};
-  Object.keys(votesData).forEach((voterId) => {
+  Object.keys(votesData).forEach(voterId => {
     const chosen = votesData[voterId];
     count[chosen] = (count[chosen] || 0) + 1;
   });
-  // Acha o mais votado
-  let maxVotes = 0;
+
   let eleitoId = null;
-  Object.keys(count).forEach((pid) => {
+  let maxVotes = 0;
+  Object.keys(count).forEach(pid => {
     if (count[pid] > maxVotes) {
       maxVotes = count[pid];
       eleitoId = pid;
@@ -812,37 +575,36 @@ btnReveal.onclick = async () => {
   });
 
   if (!eleitoId) {
-    resultArea.innerHTML = "<p>Ninguém foi votado ainda!</p>";
+    const msg = "<p>Ninguém recebeu voto ainda!</p>";
+    resultArea.innerHTML = msg;
+    salaRef.child("lastResult").set(msg);
     return;
   }
 
   // Pegar nome do eleito
-  const playersSnap = await playersRef.once('value');
-  const playersData = playersSnap.val() || {};
+  const playersSnapshot = await playersRef.once('value');
+  const playersData = playersSnapshot.val() || {};
   const eleitoName = playersData[eleitoId] ? playersData[eleitoId].name : "Desconhecido";
 
-  let msg = `O Eleito é <span class="resultHighlight">${eleitoName}</span>!`;
-  // Conta votos
-  msg += ` Recebeu ${count[eleitoId]} voto(s).`;
-
+  let msg = `O Eleito é <span class="resultHighlight">${eleitoName}</span> com ${maxVotes} voto(s)!`;
   if (globalBebida === "com") {
     msg += `<br><strong>${eleitoName}, beba seu drink!</strong>`;
   }
   resultArea.innerHTML = msg;
 
-  // Atualiza pontuação
-  const currentScore = playersData[eleitoId].score || 0;
-  playersRef.child(eleitoId).update({
-    score: currentScore + 1
-  });
+  // Atualiza lastResult (pra que jogadores também vejam)
+  salaRef.child("lastResult").set(msg);
 
-  btnReveal.classList.add("hidden");
+  // Atualiza pontuação
+  const currScore = playersData[eleitoId].score || 0;
+  playersRef.child(eleitoId).update({ score: currScore + 1 });
 
   // Próxima rodada ou fim
+  btnReveal.classList.add('hidden');
   if (globalRoundAtual < globalNumRodadas) {
     globalRoundAtual++;
     setTimeout(() => {
-      roundCounter.textContent = globalRoundAtual;
+      roundCounter.textContent = globalRoundAtual.toString();
       startNewRound();
     }, 3000);
   } else {
@@ -853,20 +615,19 @@ btnReveal.onclick = async () => {
 };
 
 /************************************************************
- * 11) FINALIZAR PARTIDA
+ * 11) FINALIZAR JOGO
  ************************************************************/
 async function finalizeGame() {
   voteStatus.textContent = "";
-  gameArea.classList.add("hidden");
-  btnReveal.classList.add("hidden");
-  btnStartGame.classList.add("hidden");
-  btnEndGame.classList.add("hidden");
+  gameArea.classList.add('hidden');
+  btnReveal.classList.add('hidden');
+  btnStartGame.classList.add('hidden');
+  btnEndGame.classList.add('hidden');
 
-  // Exibe fim de jogo
-  endGameArea.classList.remove("hidden");
-  salaRef.update({ status: "finished" });
+  endGameArea.classList.remove('hidden');
+  salaRef.update({ status: 'finished' });
 
-  // Monta ranking
+  // Ranking final
   const snap = await playersRef.once('value');
   const data = snap.val() || {};
   const arr = Object.keys(data).map(pid => {
@@ -882,33 +643,49 @@ async function finalizeGame() {
 }
 
 /************************************************************
- * 12) MODO JOGADOR
+ * 12) FUNÇÃO QUE MONTA O ARRAY DE PERGUNTAS
+ ************************************************************/
+function buildQuestionPool(modo) {
+  switch(modo) {
+    case "normal":
+      return [...normalQuestions]; 
+    case "picante":
+      return [...picanteQuestions];
+    case "normalPicante":
+      return [...normalQuestions, ...picanteQuestions];
+    default:
+      return [...normalQuestions];
+  }
+}
+
+/************************************************************
+ * 13) MODO JOGADOR
  ************************************************************/
 function showPlayerSection() {
-  initialSection.style.display = "none";
-  hostSection.style.display = "none";
-  playerSection.style.display = "block";
+  initialSection.style.display = 'none';
+  hostSection.style.display = 'none';
+  playerSection.style.display = 'block';
 }
 
-/** Entrar na sala digitando o ID (se não usou ?room=) */
+/** Entrar em sala digitando ID */
 btnGoRoom.onclick = () => {
-  const rId = inputRoomId.value.trim();
-  if (!rId) {
-    alert("Digite o ID da sala");
+  const rid = inputRoomId.value.trim();
+  if (!rid) {
+    alert("Digite o ID da sala (ex.: Sala_01)");
     return;
   }
-  globalRoomId = rId;
-  playerRoomIdArea.classList.add("hidden");
-  playerJoinArea.classList.remove("hidden");
+  globalRoomId = rid;
+  playerRoomIdArea.classList.add('hidden');
+  playerJoinArea.classList.remove('hidden');
 };
 
-/** Se veio com ?room= */
+/** Se veio via ?room=, pula direto */
 if (existingRoomParam) {
-  playerRoomIdArea.classList.add("hidden");
-  playerJoinArea.classList.remove("hidden");
+  playerRoomIdArea.classList.add('hidden');
+  playerJoinArea.classList.remove('hidden');
 }
 
-/** Botão "Participar" (Player) */
+/** Botão "Participar" */
 btnJoinPlayer.onclick = async () => {
   const name = playerNameInput.value.trim();
   if (!name) {
@@ -921,6 +698,7 @@ btnJoinPlayer.onclick = async () => {
   playersRef = salaRef.child("players");
   votesRef = salaRef.child("votes");
 
+  // Criar registro no players
   const newPlayerRef = playersRef.push();
   globalPlayerId = newPlayerRef.key;
   await newPlayerRef.set({
@@ -928,68 +706,63 @@ btnJoinPlayer.onclick = async () => {
     score: 0
   });
 
-  // Escuta pergunta atual
+  // Escuta o "currentQuestion" (objeto { question, curiosity })
   salaRef.child("currentQuestion").on('value', (snap) => {
-    const q = snap.val() || "";
-    currentQuestion.textContent = q || "(Aguardando início da partida...)";
+    const val = snap.val();
+    if (val) {
+      playerCuriosityText.textContent = val.curiosity;
+      playerQuestionText.textContent = val.question;
+    } else {
+      playerCuriosityText.textContent = "";
+      playerQuestionText.textContent = "(Aguardando início da partida...)";
+    }
   });
 
-  // Escuta status (se terminou)
+  // Escuta "lastResult" pra mostrar o vencedor
+  salaRef.child("lastResult").on('value', (snap) => {
+    const txt = snap.val() || "";
+    // Se for vazio, limpa a área
+    playerResultArea.innerHTML = txt;
+  });
+
+  // Escuta status (se terminou, etc.)
   salaRef.child("status").on('value', (snap) => {
-    const st = snap.val();
-    if (st === "finished") {
+    if (snap.val() === "finished") {
       voteOptions.innerHTML = "<p>O jogo terminou!</p>";
     }
   });
 
-  // Atualiza botões de voto
+  // Escuta lista de players pra montar botões de voto
   playersRef.on('value', (snap) => {
     const data = snap.val() || {};
     renderVoteOptions(data);
   });
 
-  playerJoinArea.classList.add("hidden");
-  playerGameArea.classList.remove("hidden");
+  playerJoinArea.classList.add('hidden');
+  playerGameArea.classList.remove('hidden');
   playerRoomIdLabel.textContent = globalRoomId;
   playerNameLabel.textContent = globalPlayerName;
 };
 
-/** Renderiza botões para votar (não votar em si mesmo) */
+/** Monta botões de voto */
 function renderVoteOptions(playersObj) {
   voteOptions.innerHTML = "";
   Object.keys(playersObj).forEach((pid) => {
-    if (pid === globalPlayerId) return;
-    const btn = document.createElement("button");
-    btn.className = "voteButton";
+    if (pid === globalPlayerId) return; // se não quiser votar em si
+    const btn = document.createElement('button');
     btn.textContent = playersObj[pid].name;
-    btn.onclick = () => voteOnPlayer(pid);
+    btn.onclick = () => castVote(pid);
     voteOptions.appendChild(btn);
   });
 }
 
-/** Registrar voto */
-function voteOnPlayer(targetPid) {
+function castVote(targetPid) {
+  // salva no /votes/playerId = targetPid
   votesRef.child(globalPlayerId).set(targetPid)
     .then(() => {
-      alert("Voto computado em: " + targetPid);
+      alert("Voto computado!");
     })
     .catch(err => console.error(err));
-}
-
-/************************************************************
- * 13) FUNÇÃO PARA CONSTRUIR O ARRAY DE PERGUNTAS CONFORME MODO
- ************************************************************/
-function buildQuestionPool(modo) {
-  switch(modo) {
-    case "normal":
-      return [...normalQuestions];
-    case "picante":
-      return [...picanteQuestions];
-    case "normalPicante":
-      return [...normalQuestions, ...picanteQuestions];
-    default:
-      return [...normalQuestions];
-  }
 }
 </script>
 </body>
