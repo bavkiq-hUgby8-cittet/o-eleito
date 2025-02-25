@@ -1,35 +1,707 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <title>O Eleito com QRCode Interno</title>
-  <!-- ... seu CSS ... -->
+  <meta charset="UTF-8" />
+  <title>O Eleito - Versão Completa (QRCode Interno)</title>
+  <style>
+    /* ======= ESTILOS BÁSICOS ======= */
+    body {
+      margin: 0; padding: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #f0f0f3; color: #333;
+    }
+    header {
+      background: #007BFF; color: #fff;
+      padding: 20px; text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    h1 {
+      margin: 0; font-size: 1.8rem;
+    }
+    .container {
+      max-width: 980px; margin: 20px auto;
+      padding: 20px; background: #fff;
+      border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h2,h3 {
+      margin-top: 0;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    /* Seções */
+    #hostSection, #playerSection {
+      display: none;
+      border: 1px solid #ccc; border-radius: 8px;
+      padding: 20px; background: #fafafa; margin-bottom: 20px;
+    }
+    hr { margin: 15px 0; }
+
+    /* Botões */
+    button {
+      background: #007BFF; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 10px 16px;
+      cursor: pointer; font-size: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+      margin-right: 8px; margin-bottom: 8px;
+    }
+    button:hover { background: #0056b3; }
+    button:disabled {
+      opacity: 0.6; cursor: not-allowed;
+    }
+
+    /* Inputs */
+    input[type="text"], select {
+      padding: 8px; border: 1px solid #ccc;
+      border-radius: 4px; font-size: 1rem;
+      margin-right: 10px;
+    }
+
+    .playerList {
+      list-style: none; padding: 0;
+    }
+    .playerList li {
+      margin: 5px 0;
+    }
+
+    /* QR code */
+    #qrCodeImg {
+      margin-top: 10px; display: block; max-width: 200px;
+    }
+
+    /* Pergunta + Curiosidade */
+    #questionContainer, #playerQuestionContainer {
+      text-align: center; margin: 20px 0;
+    }
+    .curiosityText {
+      font-style: italic; color: #555; margin-bottom: 10px;
+    }
+    .questionText {
+      font-weight: bold; font-size: 1.2rem; color: #222;
+    }
+    .resultHighlight {
+      color: #d9534f; font-weight: bold;
+    }
+    .rankingItem {
+      margin: 5px 0;
+    }
+    /* Botão de voto selecionado */
+    .selectedVote {
+      background: #28a745 !important;
+      color: #fff !important;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <!-- ... Seu HTML normal ... -->
-  <img id="qrCodeImg" />
 
-  <!-- Suas scripts normais (Firebase, etc.) -->
+<header>
+  <h1>O Eleito - Voto Único + Próxima Pergunta (QRCode Interno)</h1>
+</header>
 
-  <!-- Biblioteca QRCode -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.2/build/qrcode.min.js"></script>
+<div class="container">
+  <!-- Seção inicial -->
+  <div id="initialSection">
+    <h2>Bem-vindo!</h2>
+    <p>Escolha se você é <strong>Host</strong> (organizador) ou <strong>Jogador</strong>.</p>
+    <button id="btnHost">Sou o Host (Criar Sala)</button>
+    <button id="btnPlayer">Sou um Jogador (Entrar em Sala)</button>
+  </div>
 
-  <script>
-  // Substituindo a parte do google charts
-  function gerarQRCode(link) {
-    QRCode.toDataURL(link, { width: 200 }, function (err, url) {
-      if (err) return console.error(err);
-      const img = document.getElementById("qrCodeImg");
-      img.src = url; // data:image/png;base64,...
-    });
+  <!-- Seção do Host -->
+  <div id="hostSection">
+    <h2>Você é o Host</h2>
+
+    <div id="configSection">
+      <h3>Configurar Nova Sala</h3>
+      <label for="selectModo">Modo:</label>
+      <select id="selectModo">
+        <option value="normal">Normal</option>
+        <option value="picante">Só Picantes</option>
+        <option value="normalPicante">Normal + Picante</option>
+      </select>
+
+      <label for="selectBebida">Bebida?</label>
+      <select id="selectBebida">
+        <option value="com">Com Bebida</option>
+        <option value="sem">Sem Bebida</option>
+      </select>
+
+      <label for="selectRodadas">Rodadas:</label>
+      <select id="selectRodadas">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+      </select>
+      <br><br>
+      <button id="btnCreateRoom">Criar Sala Agora</button>
+    </div>
+
+    <div id="roomInfo" class="hidden">
+      <p><strong>ID da Sala:</strong> <span id="roomIdLabel"></span></p>
+      <p><strong>Link da Sala:</strong> <span id="roomLink"></span></p>
+      <img id="qrCodeImg" alt="QR Code da sala"/>
+      <hr>
+      <h3>Jogadores Conectados</h3>
+      <ul id="connectedPlayers" class="playerList"></ul>
+      <hr>
+      <button id="btnStartGame" class="hidden">Iniciar Partida</button>
+      <button id="btnEndGame" class="hidden">Encerrar Partida</button>
+
+      <div id="gameArea" class="hidden">
+        <h3>Rodada: <span id="roundCounter"></span> / <span id="totalRounds"></span></h3>
+        <div id="questionContainer">
+          <div class="curiosityText" id="curiosityText"></div>
+          <div class="questionText" id="questionText"></div>
+        </div>
+        <p id="voteStatus"></p>
+        <button id="btnReveal" class="hidden">Revelar Resultado</button>
+        <button id="btnNextQuestion" class="hidden">Próxima Pergunta</button>
+        <div id="resultArea"></div>
+      </div>
+
+      <div id="endGameArea" class="hidden">
+        <h3>Fim do Jogo!</h3>
+        <div id="rankingArea"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seção do Jogador -->
+  <div id="playerSection">
+    <h2>Você é um Jogador</h2>
+    <div id="playerRoomIdArea">
+      <label>Sala ID: </label>
+      <input type="text" id="inputRoomId" placeholder="Ex.: Sala12345" />
+      <button id="btnGoRoom">Entrar</button>
+    </div>
+
+    <div id="playerJoinArea" class="hidden">
+      <h3>Entrar como jogador</h3>
+      <input type="text" id="playerNameInput" placeholder="Seu nome" />
+      <button id="btnJoinPlayer">Participar</button>
+    </div>
+
+    <div id="playerGameArea" class="hidden">
+      <h3>Sala: <span id="playerRoomIdLabel"></span></h3>
+      <p>Olá, <span id="playerNameLabel"></span>!</p>
+      <div id="playerQuestionContainer">
+        <div class="curiosityText" id="playerCuriosityText"></div>
+        <div class="questionText" id="playerQuestionText"></div>
+      </div>
+      <h4>Vote em quem você acha que se encaixa:</h4>
+      <div id="voteOptions"></div>
+      <div id="playerResultArea" style="margin-top: 15px; color: #b00;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-database-compat.js"></script>
+<!-- Biblioteca QRCode para gerar QR Code localmente -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.2/build/qrcode.min.js"></script>
+
+<script>
+/**************************************************************
+ * 1) CONFIGURAR O FIREBASE (SUAS CREDENCIAIS)
+ **************************************************************/
+const firebaseConfig = {
+  apiKey: "AIzaSyCEKt94I164HQG5C8hypgFDqnfU0sztBZo",
+  authDomain: "sampleapp-7d986.firebaseapp.com",
+  databaseURL: "https://sampleapp-7d986-default-rtdb.firebaseio.com/",
+  projectId: "sampleapp-7d986",
+  storageBucket: "sampleapp-7d986.firebasestorage.app",
+  messagingSenderId: "747030699327",
+  appId: "1:747030699327:web:752a57da0289692e17c78a"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/**************************************************************
+ * 2) Função para gerar ID simples de sala
+ **************************************************************/
+function gerarIdSala() {
+  // ex: Sala + 5 dígitos random
+  const rnd = Math.floor(10000 + Math.random() * 90000);
+  return `Sala${rnd}`;
+}
+
+/**************************************************************
+ * 3) Arrays de Perguntas (Exemplo Básico)
+ *    Para 300, expanda estes arrays
+ **************************************************************/
+const normalQuestions = [
+  {
+    question: "Quem você acha que escalaria o Everest sem pensar?",
+    curiosity: "Curiosidade: O Monte Everest tem quase 9.000 metros!"
+  },
+  {
+    question: "Quem você acha que viraria meme da internet rapidinho?",
+    curiosity: "70% dos memes surgem em redes sociais como Twitter e TikTok."
+  }
+];
+const picanteQuestions = [
+  {
+    question: "Quem você acha que iria a uma praia de nudismo sem hesitar?",
+    curiosity: "Praias de nudismo são bem populares na Europa."
+  },
+  {
+    question: "Quem você acha que beijaria alguém aleatório numa festa?",
+    curiosity: "Existem estudos que catalogam mais de 20 tipos de beijos!"
+  }
+];
+
+/**************************************************************
+ * 4) CAPTURAR ELEMENTOS DO DOM
+ **************************************************************/
+const initialSection = document.getElementById("initialSection");
+const hostSection = document.getElementById("hostSection");
+const playerSection = document.getElementById("playerSection");
+
+// Host config
+const selectModo = document.getElementById("selectModo");
+const selectBebida = document.getElementById("selectBebida");
+const selectRodadas = document.getElementById("selectRodadas");
+const btnCreateRoom = document.getElementById("btnCreateRoom");
+const roomInfo = document.getElementById("roomInfo");
+const roomIdLabel = document.getElementById("roomIdLabel");
+const roomLink = document.getElementById("roomLink");
+const qrCodeImg = document.getElementById("qrCodeImg");
+const connectedPlayers = document.getElementById("connectedPlayers");
+const btnStartGame = document.getElementById("btnStartGame");
+const btnEndGame = document.getElementById("btnEndGame");
+const gameArea = document.getElementById("gameArea");
+const voteStatus = document.getElementById("voteStatus");
+const btnReveal = document.getElementById("btnReveal");
+const btnNextQuestion = document.getElementById("btnNextQuestion");
+const resultArea = document.getElementById("resultArea");
+const endGameArea = document.getElementById("endGameArea");
+const rankingArea = document.getElementById("rankingArea");
+const roundCounter = document.getElementById("roundCounter");
+const totalRounds = document.getElementById("totalRounds");
+const curiosityText = document.getElementById("curiosityText");
+const questionText = document.getElementById("questionText");
+
+// Player
+const inputRoomId = document.getElementById("inputRoomId");
+const btnGoRoom = document.getElementById("btnGoRoom");
+const playerJoinArea = document.getElementById("playerJoinArea");
+const playerNameInput = document.getElementById("playerNameInput");
+const btnJoinPlayer = document.getElementById("btnJoinPlayer");
+const playerGameArea = document.getElementById("playerGameArea");
+const playerRoomIdLabel = document.getElementById("playerRoomIdLabel");
+const playerNameLabel = document.getElementById("playerNameLabel");
+const playerCuriosityText = document.getElementById("playerCuriosityText");
+const playerQuestionText = document.getElementById("playerQuestionText");
+const voteOptions = document.getElementById("voteOptions");
+const playerResultArea = document.getElementById("playerResultArea");
+
+// Botões Iniciais
+const btnHost = document.getElementById("btnHost");
+const btnPlayer = document.getElementById("btnPlayer");
+const playerRoomIdArea = document.getElementById("playerRoomIdArea");
+
+/**************************************************************
+ * Variáveis Globais
+ **************************************************************/
+let globalRoomId = null;
+let globalIsHost = false;
+let globalPlayerId = null;
+let globalPlayerName = "";
+let globalModo = "normal";
+let globalBebida = "com";
+let globalNumRodadas = 5;
+let globalRoundAtual = 0;
+let salaRef = null;
+let playersRef = null;
+let votesRef = null;
+let questionPool = [];
+let usedIndexes = [];
+
+/**************************************************************
+ * 5) SE HÁ ?room= NO LINK, VAI DIRETO PRA MODO PLAYER
+ **************************************************************/
+const urlParams = new URLSearchParams(window.location.search);
+const existingRoomParam = urlParams.get("room");
+if (existingRoomParam) {
+  globalRoomId = existingRoomParam; // ex Sala12345
+  showPlayerSection();
+} else {
+  // Mostra a tela inicial
+  initialSection.style.display = "block";
+}
+
+/**************************************************************
+ * 6) Botões da tela inicial
+ **************************************************************/
+btnHost.onclick = () => {
+  initialSection.style.display = "none";
+  hostSection.style.display = "block";
+};
+btnPlayer.onclick = () => {
+  initialSection.style.display = "none";
+  playerSection.style.display = "block";
+};
+
+/**************************************************************
+ * 7) HOST: CRIAR SALA
+ **************************************************************/
+btnCreateRoom.onclick = async () => {
+  globalModo = selectModo.value;
+  globalBebida = selectBebida.value;
+  globalNumRodadas = parseInt(selectRodadas.value);
+
+  questionPool = montarQuestionPool(globalModo);
+  usedIndexes = [];
+
+  // Gera ID
+  globalRoomId = gerarIdSala(); // ex Sala12345
+  globalIsHost = true;
+
+  salaRef = db.ref(`salas/${globalRoomId}`);
+  playersRef = salaRef.child("players");
+  votesRef = salaRef.child("votes");
+
+  // Seta dados iniciais
+  await salaRef.set({
+    modo: globalModo,
+    bebida: globalBebida,
+    numRodadas: globalNumRodadas,
+    status: "waiting",
+    currentQuestion: null,
+    round: 0,
+    lastResult: "",
+    createdAt: Date.now()
+  });
+
+  // Mostra a área de Info da Sala
+  roomInfo.classList.remove("hidden");
+  roomIdLabel.textContent = globalRoomId;
+
+  // Monta link
+  const fullLink = window.location.origin + window.location.pathname + `?room=${globalRoomId}`;
+  roomLink.textContent = fullLink;
+
+  // Gera QR Code local (biblioteca QRCode)
+  QRCode.toDataURL(fullLink, { width: 200 }, (err, url) => {
+    if (err) console.error("Erro QR:", err);
+    else qrCodeImg.src = url;
+  });
+
+  // Escuta jogadores
+  playersRef.on("value", (snap) => {
+    const data = snap.val() || {};
+    renderPlayersList(data);
+  });
+
+  // Escuta lastResult (resultado final p/ host ver)
+  salaRef.child("lastResult").on("value", (snap) => {
+    const txt = snap.val() || "";
+    if (txt) {
+      resultArea.innerHTML = txt;
+    }
+  });
+
+  document.getElementById("configSection").classList.add("hidden");
+  btnStartGame.classList.remove("hidden");
+  btnEndGame.classList.remove("hidden");
+};
+
+/** Mostrar jogadores no host */
+function renderPlayersList(playersObj) {
+  connectedPlayers.innerHTML = "";
+  Object.keys(playersObj).forEach(pid => {
+    const li = document.createElement("li");
+    li.textContent = playersObj[pid].name;
+    connectedPlayers.appendChild(li);
+  });
+}
+
+/**************************************************************
+ * 8) Iniciar Partida (Host)
+ **************************************************************/
+btnStartGame.onclick = () => {
+  salaRef.update({
+    status: "inProgress",
+    round: 1
+  });
+  globalRoundAtual = 1;
+  btnStartGame.classList.add("hidden");
+  gameArea.classList.remove("hidden");
+  endGameArea.classList.add("hidden");
+  totalRounds.textContent = globalNumRodadas.toString();
+  roundCounter.textContent = globalRoundAtual.toString();
+
+  novaRodada(); // sorteia a 1ª pergunta
+};
+
+/** Encerrar Partida manual */
+btnEndGame.onclick = () => {
+  finalizarPartida();
+};
+
+/**************************************************************
+ * 9) Sortear Pergunta
+ **************************************************************/
+function novaRodada() {
+  // Limpar votos
+  votesRef.set({});
+  resultArea.innerHTML = "";
+  salaRef.child("lastResult").set("");
+  btnReveal.classList.remove("hidden");
+  btnNextQuestion.classList.add("hidden");
+  voteStatus.textContent = "Aguardando votos...";
+
+  const idx = getUniqueIndex();
+  const perg = questionPool[idx];
+  curiosityText.textContent = perg.curiosity;
+  questionText.textContent = perg.question;
+
+  salaRef.update({ currentQuestion: perg });
+}
+
+/** Evitar repetir pergunta caso ainda haja */
+function getUniqueIndex() {
+  if (usedIndexes.length >= questionPool.length) {
+    // se acabou, volta a sortear livre
+    return Math.floor(Math.random() * questionPool.length);
+  }
+  let i = Math.floor(Math.random() * questionPool.length);
+  while (usedIndexes.includes(i)) {
+    i = Math.floor(Math.random() * questionPool.length);
+  }
+  usedIndexes.push(i);
+  return i;
+}
+
+/**************************************************************
+ * 10) Revelar Resultado (Host)
+ **************************************************************/
+btnReveal.onclick = async () => {
+  const snap = await votesRef.once("value");
+  const votesData = snap.val() || {};
+
+  // conta
+  const cont = {};
+  Object.keys(votesData).forEach((voterId)=>{
+    const chosen = votesData[voterId];
+    cont[chosen] = (cont[chosen]||0)+1;
+  });
+
+  let eleitoId=null, maxVotos=0;
+  Object.keys(cont).forEach(pid=>{
+    if(cont[pid]>maxVotos){
+      maxVotos=cont[pid];
+      eleitoId=pid;
+    }
+  });
+
+  let msg = "";
+  if(!eleitoId){
+    msg="<p>Ninguém recebeu voto!</p>";
+    salaRef.child("lastResult").set(msg);
+    resultArea.innerHTML=msg;
+  } else {
+    // obtem nome do eleito
+    const plSnap = await playersRef.once("value");
+    const plData = plSnap.val()||{};
+    const eleitoName = plData[eleitoId]? plData[eleitoId].name : "Desconhecido";
+
+    msg=`O Eleito é <span class='resultHighlight'>${eleitoName}</span> com ${maxVotos} voto(s)!`;
+    if(globalBebida==="com"){
+      msg+=`<br><strong>${eleitoName}, beba seu drink!</strong>`;
+    }
+    resultArea.innerHTML=msg;
+    salaRef.child("lastResult").set(msg);
+
+    // Pontuação
+    const oldScore=plData[eleitoId].score||0;
+    playersRef.child(eleitoId).update({ score: oldScore+1 });
   }
 
-  // Exemplo de uso:
-  function criarSala() {
-    // ...
-    const fullLink = window.location.origin + ... // etc
-    gerarQRCode(fullLink);
+  btnReveal.classList.add("hidden");
+  btnNextQuestion.classList.remove("hidden");
+};
+
+/**************************************************************
+ * 11) Botão Próxima Pergunta
+ **************************************************************/
+btnNextQuestion.onclick = ()=>{
+  if(globalRoundAtual<globalNumRodadas){
+    globalRoundAtual++;
+    roundCounter.textContent=globalRoundAtual.toString();
+    novaRodada();
+  } else {
+    finalizarPartida();
   }
-  </script>
+};
+
+/**************************************************************
+ * 12) Finalizar Partida
+ **************************************************************/
+async function finalizarPartida(){
+  voteStatus.textContent="";
+  gameArea.classList.add("hidden");
+  btnReveal.classList.add("hidden");
+  btnNextQuestion.classList.add("hidden");
+  btnStartGame.classList.add("hidden");
+  btnEndGame.classList.add("hidden");
+
+  endGameArea.classList.remove("hidden");
+  salaRef.update({ status:"finished" });
+
+  const snap=await playersRef.once("value");
+  const data=snap.val()||{};
+  const arr= Object.keys(data).map(pid=>({
+    name:data[pid].name, score:data[pid].score||0
+  }));
+  arr.sort((a,b)=>b.score-a.score);
+
+  let html="<h4>Ranking Final</h4>";
+  arr.forEach((pl,i)=>{
+    html+=`<div class='rankingItem'><strong>${i+1}º</strong> - ${pl.name}: ${pl.score} votos</div>`;
+  });
+  rankingArea.innerHTML=html;
+}
+
+/**************************************************************
+ * 13) Montar Pool Perguntas
+ **************************************************************/
+function montarQuestionPool(modo){
+  switch(modo){
+    case "normal": return [...normalQuestions];
+    case "picante": return [...picanteQuestions];
+    case "normalPicante": return [...normalQuestions,...picanteQuestions];
+    default: return [...normalQuestions];
+  }
+}
+
+/**************************************************************
+ * 14) Modo Jogador
+ **************************************************************/
+function showPlayerSection(){
+  initialSection.style.display="none";
+  hostSection.style.display="none";
+  playerSection.style.display="block";
+}
+
+/** Entrar sala digitando ID */
+btnGoRoom.onclick = ()=>{
+  const rid=inputRoomId.value.trim();
+  if(!rid){
+    alert("Digite o ID da sala, Ex: Sala12345");
+    return;
+  }
+  globalRoomId=rid;
+  playerRoomIdArea.classList.add("hidden");
+  playerJoinArea.classList.remove("hidden");
+};
+
+/** Se veio ?room=, pula direto */
+if(existingRoomParam){
+  playerRoomIdArea.classList.add("hidden");
+  playerJoinArea.classList.remove("hidden");
+}
+
+/** Botão Participar (Jogador) */
+btnJoinPlayer.onclick=async ()=>{
+  const name=playerNameInput.value.trim();
+  if(!name){
+    alert("Digite seu nome!");
+    return;
+  }
+  globalPlayerName=name;
+
+  salaRef=db.ref(`salas/${globalRoomId}`);
+  playersRef=salaRef.child("players");
+  votesRef=salaRef.child("votes");
+
+  // cria player
+  const pRef=playersRef.push();
+  globalPlayerId=pRef.key;
+  await pRef.set({
+    name: globalPlayerName, score:0
+  });
+
+  // Escuta currentQuestion
+  salaRef.child("currentQuestion").on("value",(snap)=>{
+    const val=snap.val();
+    if(val){
+      playerCuriosityText.textContent=val.curiosity;
+      playerQuestionText.textContent=val.question;
+    } else {
+      playerCuriosityText.textContent="";
+      playerQuestionText.textContent="(Aguardando início...)";
+    }
+    // Reabilitar voto
+    reabilitarVoto();
+  });
+
+  // Escuta lastResult
+  salaRef.child("lastResult").on("value",(snap)=>{
+    const txt=snap.val()||"";
+    playerResultArea.innerHTML=txt;
+  });
+
+  // Escuta status
+  salaRef.child("status").on("value",(snap)=>{
+    if(snap.val()==="finished"){
+      voteOptions.innerHTML="<p>O jogo terminou!</p>";
+    }
+  });
+
+  // Escuta players => montar botões
+  playersRef.on("value",(snap)=>{
+    const data=snap.val()||{};
+    montarBotoesVoto(data);
+  });
+
+  playerJoinArea.classList.add("hidden");
+  playerGameArea.classList.remove("hidden");
+  playerRoomIdLabel.textContent=globalRoomId;
+  playerNameLabel.textContent=globalPlayerName;
+};
+
+/** Montar botões de voto */
+function montarBotoesVoto(playersObj){
+  voteOptions.innerHTML="";
+  Object.keys(playersObj).forEach(pid=>{
+    if(pid===globalPlayerId) return; // se não quiser votar em si
+    const btn=document.createElement("button");
+    btn.textContent=playersObj[pid].name;
+    btn.onclick=()=> votarEm(pid,btn);
+    voteOptions.appendChild(btn);
+  });
+}
+
+/** 1 clique => travar botões */
+function votarEm(alvoPid,botao){
+  votesRef.child(globalPlayerId).set(alvoPid)
+    .then(()=>{
+      const btns=voteOptions.querySelectorAll("button");
+      btns.forEach(b=>{
+        b.disabled=true;
+        if(b===botao){
+          b.classList.add("selectedVote");
+        }
+      });
+    })
+    .catch(err=>console.error(err));
+}
+
+/** Reabilitar voto quando pergunta muda */
+function reabilitarVoto(){
+  const btns=voteOptions.querySelectorAll("button");
+  btns.forEach(b=>{
+    b.disabled=false;
+    b.classList.remove("selectedVote");
+  });
+}
+</script>
 </body>
 </html>
