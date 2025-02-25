@@ -1,51 +1,30 @@
-<script>
-/* ... resto do código ... */
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>O Eleito - Versão Completa (QRCode Interno)</title>
+  <style>
+    /* ======= ESTILOS BÁSICOS ======= */
+    body {
+      margin: 0; 
+      padding: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #f0f0f3;
+      color: #333;
+    }
+    header {
+      background: #007BFF;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+    .container {
+      max-width: 980px;
+      margin: 20px auto;
+  
 
-// (Dentro de novaRodada)
-function novaRodada() {
-  votesRef.set({});
-  salaRef.child("lastResult").set("");
-
-  // Deixa os dois botões livres (se você quiser):
-  //btnReveal.classList.remove("hidden");
-  //btnNextQuestion.classList.add("hidden"); // <--- REMOVIDO
-
-  voteStatus.textContent = "Aguardando votos...";
-
-  const idx = getUniqueIdx();
-  const perg = questionPool[idx];
-  curiosityText.textContent = perg.curiosity;
-  questionText.textContent = perg.question;
-
-  salaRef.update({ currentQuestion: perg });
-}
-
-btnReveal.onclick = async () => {
-  // ... (cálculo de votos) ...
-  //btnReveal.classList.add("hidden");    // <--- REMOVIDO
-  //btnNextQuestion.classList.remove("hidden"); // <--- REMOVIDO
-};
-
-btnNextQuestion.onclick = () => {
-  // Mesmo se não tiver revelado, deixa passar
-  if (globalRoundAtual < globalNumRodadas) {
-    globalRoundAtual++;
-    roundCounter.textContent = globalRoundAtual.toString();
-    novaRodada();
-  } else {
-    finalizarPartida();
-  }
-};
-
-// (Dentro de btnStartGame.onclick)
-btnStartGame.onclick = () => {
-  // ...
-  // Remove a linha que escondia o botão
-  // btnStartGame.classList.add("hidden"); // <--- REMOVIDO
-  gameArea.classList.remove("hidden");
-  endGameArea.classList.add("hidden");
-  totalRounds.textContent = globalNumRodadas.toString();
-  roundCounter.textContent = globalRoundAtual.toString();
-  novaRodada();
-};
-</script>
